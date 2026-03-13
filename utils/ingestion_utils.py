@@ -152,8 +152,3 @@ def get_and_save_all_pages(
         if offset >= total:
             break
 
-        # if not items:
-        #     raise ValueError(
-        #         f"Empty page received before reaching total. offset={offset}, total={total}"
-        #     )
-

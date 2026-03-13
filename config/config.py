@@ -5,7 +5,8 @@ class ProfileKeys(Enum):
     BRONZE_ROOT = "bronze_tables",
     TS_FORMAT = "ts_format",
     TS_DAYLY_FORMAT = "ts_dayly_format",
-    TS_MONTH_FORMAT = "ts_monthly_format"
+    TS_MONTH_FORMAT = "ts_monthly_format",
+    BASE_URL = "base_url"
 
 PROXY_BASE_URL = "https://lh-proxy.onrender.com"
 # API_BASE_PREFIX = "/references"
@@ -18,7 +19,7 @@ PROXY_PASSWORD_VALUE = "DataIntelligence2026"
 # DEFAULT_SCOPE = "/tmp"
 
 PROFILE_TMP = {
-    # ProfileKeys.VOLUME_ROOT: "/Volumes/main/lufthansa_level3/staging_area",
+    ProfileKeys.BASE_URL: "https://lh-proxy.onrender.com",
     ProfileKeys.LANDING_ROOT: "/Volumes/main/lufthansa_bronze/landing_area/tmp",
     ProfileKeys.BRONZE_ROOT: "main.lufthansa_bronze.{entity_name}",
     ProfileKeys.TS_FORMAT: "%Y%m%dT%H%M%S",
@@ -27,6 +28,7 @@ PROFILE_TMP = {
 }
 
 PROFILE = PROFILE_TMP
+
 
 # Endpoints keys
 class EndpointKeys(Enum):
