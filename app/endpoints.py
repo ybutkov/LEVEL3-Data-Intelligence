@@ -1,4 +1,5 @@
 from enum import Enum
+from app.config import get_config
 
 class EndpointKeys(str, Enum):
     AIRPORTS = "airports"
@@ -36,5 +37,9 @@ LIST_ENDPOINTS = {
 }
 
 def get_endpoint(endpoint_key, **params):
+    cfg = get_config()
+    # Check if endpoint exist
     template = ENDPOINTS[endpoint_key]
-    return template.format(**params)
+    endpoint_with_params = template.format(**params)
+    full_url = f"{cfg.api.base_url}{cfg.version}{endpoint_with_params}"
+    return full_url

@@ -1,9 +1,10 @@
 from clients.base_http_client import BaseHttpClient
+from app.secrets import get_proxy_password
 
-class LufthansaClient(BaseHttpClient):
+class LufthansaProxyClient(BaseHttpClient):
     def _get_headers(self, headers=None):
         base_headres = {'user-agent': 'my-agent/1.0.1',
-            'password': 'get_proxy_password()',
+            'password': get_proxy_password(),
             'Accept': 'application/json'}
         if headers:
             base_headres.update(headers)
