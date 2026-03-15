@@ -1,4 +1,4 @@
-from clients.base_http_client import BaseHttpClient
+from client.base_http_client import BaseHttpClient
 from app.secrets import get_proxy_password
 
 class LufthansaProxyClient(BaseHttpClient):
@@ -11,8 +11,8 @@ class LufthansaProxyClient(BaseHttpClient):
         return base_headres
     
     def get(self, path, params=None, headers=None, timeout=None):
-        return super()._get(path, params, self._get_headers(headers), timeout)
+        return super().get(path, params, self._get_headers(headers), timeout)
     
     def post(self, path, params=None, json=None, headers=None, timeout=None):
-        return super()._post(path, params, json, self._get_headers(headers), timeout)
+        return super().post(path, params, json, self._get_headers(headers), timeout)
     

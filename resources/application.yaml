@@ -1,0 +1,33 @@
+api:
+  version: v1
+  base_url: https://api.lufthansa.com
+
+secrets:
+  secret_scope: lufthansa_proxy
+  password_key: password
+
+storage:
+  catalog: main
+  bronze_schema: lufthansa_bronze
+  silver_schema: lufthansa_silver
+  gold_schema: lufthansa_gold
+  landing_volume: landing_area/tmp
+
+path_template:
+  landing_dir: "/Volumes/{catalog}/{bronze_schema}/{landing_volume}/{entity}/"
+  time_template:
+    dayly: "%Y-%m-%d/"
+    monthly: "%Y-%m/"
+  file_name: "page_{page:04d}_offset_{offset:05d}_limit_{limit}.json"
+  file_name_single: "data.json"
+
+landing:
+  landing_root: "/Volumes/main/lufthansa_bronze/landing_area/tmp"
+
+  bronse:
+    bronze_root: "main.lufthansa_bronze.{entity_name}"
+
+format:
+    ts_format: "%Y%m%dT%H%M%S"
+    ts_dayly_format: "%Y-%m-%d"
+    ts_monthly_format: "month/%Y-%m"

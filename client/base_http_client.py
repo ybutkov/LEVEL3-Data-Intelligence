@@ -13,25 +13,27 @@ class BaseHttpClient:
     def get(self, path, params=None, headers=None, timeout=None):
         if timeout is None:
             timeout = self.defaultTimeout
+        if headers is None:
+            headers = self.headers
         response = self.session.get(
-            f"{self.base_url}/{path}",
-            headers=self.headers, 
+            f"{self.base_url}{path}",
+            headers=headers, 
             params=params,
             timeout=timeout)
 
         response.raise_for_status()
-        return response.json()
+        return response
 
     def post(self, path, params=None, json=None, headers=None, timeout=None):
         if timeout is None:
             timeout = self.defaultTimeout
 
         response = self.session.post(
-            f"{self.base_url}/{path}",
+            f"{self.base_url}{path}",
             params=params,
             headers=self.headers,
             json=json,
             timeout=timeout)
 
         response.raise_for_status()
-        return response.json()
+        return response

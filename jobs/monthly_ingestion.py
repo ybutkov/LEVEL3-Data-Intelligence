@@ -1,22 +1,22 @@
-from pyspark.sql import SparkSession
-from pyspark.dbutils import DBUtils
-import config.config as cfg
-from utils.ingestion_utils import *
+from app.init_app import init_app
+from services.ingestion_service import get_and_save_all_pages
+from config.endpoints import EndpointKeys
+from app.logger import get_logger
 
-spark = SparkSession.builder.getOrCreate()
-dbutils = DBUtils(spark)
+def monthly_bronze_lufthansa_ingestion():
+    get_and_save_all_pages(EndpointKeys.COUNTRIES, limit=100, time_period="monthly")
+    get_and_save_all_pages(EndpointKeys.CITIES, limit=100, time_period="monthly")
+    get_and_save_all_pages(EndpointKeys.AIRPORTS, limit=100, time_period="monthly")
+    get_and_save_all_pages(EndpointKeys.AIRLINES, limit=100, time_period="monthly")
+    get_and_save_all_pages(EndpointKeys.AIRCRAFT, limit=100, time_period="monthly")
 
-print("Monthly Job start")
+def main():
+    logger = get_logger("jobs.monthly_bronze_lufthansa_ingestion")
+    logger.info("Starting monthly bronze ingestion for lufthansa")
+    init_app()
+    monthly_bronze_lufthansa_ingestion()
+    logger.info("Finished monthly bronze ingestion for lufthansa")
 
-# for endpoint in cfg.LIST_ENDPOINTS:
-#     print(f"Loading data for endpoint {endpoint}")
-#     get_and_save_all_pages(endpoint, limit=100, time_dir_format=cfg.PROFILE.get(cfg.ProfileKeys.TS_MONTH_FORMAT))
-
-# get_and_save_all_pages(cfg.EndpointKeys.AIRPORTS, limit=100, time_dir_format=cfg.PROFILE.get(cfg.ProfileKeys.TS_MONTH_FORMAT))
-get_and_save_all_pages(cfg.EndpointKeys.COUNTRIES, limit=100, time_dir_format=cfg.PROFILE.get(cfg.ProfileKeys.TS_MONTH_FORMAT))
-# get_and_save_all_pages(cfg.EndpointKeys.CITIES, limit=100, time_dir_format=cfg.PROFILE.get(cfg.ProfileKeys.TS_MONTH_FORMAT))
-# get_and_save_all_pages(cfg.EndpointKeys.AIRLINES, limit=100, time_dir_format=cfg.PROFILE.get(cfg.ProfileKeys.TS_MONTH_FORMAT))
-# get_and_save_all_pages(cfg.EndpointKeys.AIRCRAFT, limit=100, time_dir_format=cfg.PROFILE.get(cfg.ProfileKeys.TS_MONTH_FORMAT))
-
-
-print("Monthly Job finish")
+ 
+if __name__ == "__main__":
+    main()
