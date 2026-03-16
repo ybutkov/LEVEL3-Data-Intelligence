@@ -3,12 +3,12 @@ from app.init_app import init_app
 from config.endpoints import EndpointKeys
 from util.json_utils import get_value_by_path
 from config.endpoints import get_endpoint_config
-from services.ingestion_service import get_full_save_path
-from services.ingestion_service import get_and_save_all_pages
 from app.logger import get_logger
 
+from services.ingestion_service import get_full_save_path
+from services.ingestion_service import get_and_save_all_pages
 from services.ingestion_service import build_url_for_endpoint, fetch_data
-
+from services.storage_service import load_json_to_bronze_autoloader
 
 def monthly_job():
   # get_and_save_allget_Conconfig_propertiesfigProperties_pages(cfg.EndpointKeys.COUNTRIES, limit=100, 
@@ -50,18 +50,39 @@ def test_fetch():
     print(response.json())
 
 def test_get_and_save_all_pages():
-    # get_and_save_all_pages(EndpointKeys.COUNTRIES, limit=100, time_period="monthly")
+    get_and_save_all_pages(EndpointKeys.COUNTRIES, limit=100, time_period="monthly")
     # get_and_save_all_pages(EndpointKeys.CITIES, limit=100, time_period="monthly")
-    get_and_save_all_pages(EndpointKeys.AIRPORTS, limit=100, time_period="monthly")
+    # get_and_save_all_pages(EndpointKeys.AIRPORTS, limit=100, time_period="monthly")
     # get_and_save_all_pages(EndpointKeys.AIRLINES, limit=100, time_period="monthly")
     # get_and_save_all_pages(EndpointKeys.AIRCRAFT, limit=100, time_period="monthly")
 
+def test_logger():
+    logger = get_logger("test_logger")
+
+    logger.debug("TEST")
+    logger.info("TEST")
+    logger.warning("TEST")
+    logger.error("TEST")
+    logger.critical("TEST")
+
+def test_bronze_autoloader():
+    logger = get_logger("test_bronze_autoloader")
+    logger.info("test_bronze_autoloader")
+    get_and_save_all_pages(EndpointKeys.COUNTRIES, limit=50, time_period="daily")
+    # get_and_save_all_pages(EndpointKeys.COUNTRIES, limit=100, time_period="monthly")
+    load_json_to_bronze_autoloader(EndpointKeys.COUNTRIES, time_period="daily")
+
 def main():
     init_app()
-    config = get_ConfigProperties()
+    # config = get_ConfigProperties()
+    # logger = get_logger("test_logger")
+    # test_logger()
+    test_bronze_autoloader()
     # test_config(config)
     # test_fetch()
     test_get_and_save_all_pages()
+    # get_and_save_all_pages(EndpointKeys.COUNTRIES, limit=100, time_period="dayly")
+    
  
 if __name__ == "__main__":
     main()

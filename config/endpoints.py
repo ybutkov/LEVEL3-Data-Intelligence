@@ -30,13 +30,9 @@ class EndpointConfig:
     bronze_table: str = ""
     silver_table: str = ""
 
-    is_list: bool = False
-    supports_pagination: bool = False
-
     path_params: tuple[str, ...] = ()
     query_params: tuple[str, ...] = ()
 
-    default_query_params: dict[str, Any] = field(default_factory=dict)
 
 ENDPOINT_CONFIGS: dict[EndpointKeys, EndpointConfig] = {
     EndpointKeys.COUNTRIES: EndpointConfig(
@@ -48,10 +44,7 @@ ENDPOINT_CONFIGS: dict[EndpointKeys, EndpointConfig] = {
         raw_folder="countries",
         bronze_table="countries_raw",
         silver_table="countries",
-        is_list=True,
-        supports_pagination=True,
         query_params=("offset", "limit", "lang"),
-        default_query_params={"lang": "en"},
     ),
         EndpointKeys.CITIES: EndpointConfig(
         key=EndpointKeys.CITIES,
@@ -62,10 +55,7 @@ ENDPOINT_CONFIGS: dict[EndpointKeys, EndpointConfig] = {
         raw_folder="cities",
         bronze_table="cities_raw",
         silver_table="cities",
-        is_list=True,
-        supports_pagination=True,
         query_params=("offset", "limit", "lang"),
-        default_query_params={"lang": "en"},
     ),
     EndpointKeys.AIRPORTS: EndpointConfig(
         key=EndpointKeys.AIRPORTS,
@@ -76,10 +66,7 @@ ENDPOINT_CONFIGS: dict[EndpointKeys, EndpointConfig] = {
         raw_folder="airports",
         bronze_table="airports_raw",
         silver_table="airports",
-        is_list=True,
-        supports_pagination=True,
         query_params=("offset", "limit", "lang"),
-        default_query_params={"lang": "en"},
     ),
     EndpointKeys.AIRLINES: EndpointConfig(
         key=EndpointKeys.AIRLINES,
@@ -90,10 +77,7 @@ ENDPOINT_CONFIGS: dict[EndpointKeys, EndpointConfig] = {
         raw_folder="airlines",
         bronze_table="airlines_raw",
         silver_table="airlines",
-        is_list=True,
-        supports_pagination=True,
         query_params=("offset", "limit", "lang"),
-        default_query_params={"lang": "en"},
     ),
     EndpointKeys.AIRCRAFT: EndpointConfig(
         key=EndpointKeys.AIRCRAFT,
@@ -104,10 +88,19 @@ ENDPOINT_CONFIGS: dict[EndpointKeys, EndpointConfig] = {
         raw_folder="aircraft",
         bronze_table="aircraft_raw",
         silver_table="aircraft",
-        is_list=True,
-        supports_pagination=True,
         query_params=("offset", "limit", "lang"),
-        default_query_params={"lang": "en"},
+    ),
+    EndpointKeys.FLIGHTSTATUS_BY_ROUTE: EndpointConfig(
+        key=EndpointKeys.FLIGHTSTATUS_BY_ROUTE,
+        path="/operations/flightstatus/route/{departure_airport_code}/{arrival_airport_code}/{date}",
+        resource_key="FlightStatusResource",
+        collection_path=("FlightStatusResource", "Flights", "Flight"),
+        total_count_path=("FlightStatusResource", "Meta", "TotalCount"),
+        raw_folder="flightstatus_by_route",
+        bronze_table="flightstatus_by_route_raw",
+        silver_table="flightstatus_by_route",
+        path_params=("departure_airport_code", "arrival_airport_code", "date"),
+        query_params=("offset", "limit", "lang"),
     ),
 }
 

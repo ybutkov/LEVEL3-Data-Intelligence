@@ -57,7 +57,7 @@ def get_full_save_path(endpoint, page=None, offset=None, limit=None, time_period
         landing_volume=configProperties.storage.landing_volume,
         entity=endpoint.value,
     )
-    if time_period in ("dayly", "monthly"):
+    if time_period in ("daily", "monthly"):
         # time_dir = datetime.datetime.now().strftime(cfg.path_template.time_template.monthly)
         time_dir = datetime.datetime.now().strftime(configProperties.path_template.time_template[time_period])
     else:
@@ -95,6 +95,7 @@ def get_total_count(data):
     resource = next(iter(data.values()), {})
     return resource.get("Meta", {}).get("TotalCount")
 
+# endpoint -> url
 def get_split_and_save_request(
         endpoint,
         path_params=None,
@@ -141,6 +142,7 @@ def get_split_and_save_request(
         logger.exception(f"Request failed endpoint={endpoint.value} offset={offset} limit={limit} error={e}")
         if limit <= 1:
             logger.error(f"Skipping bad record endpoint={endpoint.value} offset={offset} limit={limit}")
+            # TODO: Should write to file error json ?
             failed_offsets.append(offset)
             return data, failed_offsets
         left_part = limit // 2
@@ -213,11 +215,20 @@ def get_and_save_all_pages(
         #     print("Failed offsets:", failed_offsets)
         #     break
 
+        # TODO: Add loading until offset >= total or empty result
         if total and offset >= total:
-            print("Failed offsets:", failed_offsets)
+            if failed_offsets:
+                logger.warning(f"Failed offsets: {failed_offsets}. Sent to Kafka")
             break
     logger.info(f"Finish retrieving data for {endpoint.value}")
 
+# def get_flights(origin, destination, date, query_params=None):
+#     headers = get_headers()
+#     path_template = cfg.ENDPOINTS.get(cfg.EndpointKeys.FLIGHTSTATUS_BY_ROUTE)
+#     full_path = path_template.format(origin=origin, destination=destination, date=date)
+#     full_url = f"{cfg.PROXY_BASE_URL}{cfg.API_VERSION}{full_path}"
+#     response = requests.get(full_url, headers=headers, params=query_params)
+#     return response
 
 # def get_and_save_data(endpoint, path_params=None, query_params=None, limit=100):
 #     if endpoint in cfg.LIST_ENDPOINTS:

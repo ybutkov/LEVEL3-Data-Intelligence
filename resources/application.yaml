@@ -2,6 +2,10 @@ api:
   version: v1
   base_url: https://api.lufthansa.com
 
+logger:
+  level: debug
+  datetime_format: "%Y-%m-%dT%H:%M:%S"
+
 secrets:
   secret_scope: lufthansa_proxy
   password_key: password
@@ -16,7 +20,7 @@ storage:
 path_template:
   landing_dir: "/Volumes/{catalog}/{bronze_schema}/{landing_volume}/{entity}/"
   time_template:
-    dayly: "%Y-%m-%d/"
+    daily: "%Y-%m-%d/"
     monthly: "%Y-%m/"
   file_name: "page_{page:04d}_offset_{offset:05d}_limit_{limit}.json"
   file_name_single: "data.json"

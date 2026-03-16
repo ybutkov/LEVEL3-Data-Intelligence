@@ -11,9 +11,9 @@ def monthly_bronze_lufthansa_ingestion():
     get_and_save_all_pages(EndpointKeys.AIRCRAFT, limit=100, time_period="monthly")
 
 def main():
+    init_app()
     logger = get_logger("jobs.monthly_bronze_lufthansa_ingestion")
     logger.info("Starting monthly bronze ingestion for lufthansa")
-    init_app()
     monthly_bronze_lufthansa_ingestion()
     logger.info("Finished monthly bronze ingestion for lufthansa")
 

@@ -2,6 +2,7 @@ import logging
 import sys
 import json
 from pathlib import Path
+from config.config_properties import get_ConfigProperties
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
@@ -18,7 +19,7 @@ class SpringColorFormatter(logging.Formatter):
     COLORS = {
         logging.DEBUG: "\033[36m",     # cyan
         logging.INFO: "\033[32m",      # green
-        logging.WARNING: "\033[33m",   # yellow
+        logging.WARNING: "\033[93m",   # yellow
         logging.ERROR: "\033[31m",     # red
         logging.CRITICAL: "\033[41m",  # red background
     }
@@ -48,6 +49,7 @@ class SpringColorFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
 
         level_color = self.COLORS.get(record.levelno, self.RESET)
+        # TODO : we add msecs to all types of datefmt. Fix formatting to avoid this
         time = f"{self.formatTime(record, self.datefmt)}.{record.msecs:03.0f}"
         level = f"{level_color}{record.levelname:<8}{self.RESET}"
         relative_path= project_relative(record.pathname)
@@ -63,10 +65,7 @@ class SpringColorFormatter(logging.Formatter):
         )
 
 class JSONFormatter(logging.Formatter):
-   """Structured JSON formatter for logging."""
-
    def format(self, record: logging.LogRecord) -> str:
-       """Formats log records as JSON."""
        log_record = {
            'timestamp': self.formatTime(record, self.datefmt),
            'level': record.levelname,
@@ -78,16 +77,17 @@ class JSONFormatter(logging.Formatter):
 
 def get_logger(name: str = "lufthansa_ingestion") -> logging.Logger:
     logger = logging.getLogger(name)
+    configProperties = get_ConfigProperties()
 
-    if logger.handlers:
+    if logger.hasHandlers():
         return logger
-
-    logger.setLevel(logging.INFO)
+    level = configProperties.logger.level.upper()
+    logger.setLevel(level)
     handler = logging.StreamHandler(sys.stdout)
    
-    handler.setLevel(logging.INFO)
+    handler.setLevel(level)
 
-    formatter = SpringColorFormatter(datefmt="%Y-%m-%dT%H:%M:%S")
+    formatter = SpringColorFormatter(datefmt=configProperties.logger.datetime_format)
     # formatter = logging.Formatter(
     #     "%(asctime)-23s | %(levelname)-8s | %(filename)-30s: %(lineno)-4d | %(message)s"
     # )
@@ -96,5 +96,6 @@ def get_logger(name: str = "lufthansa_ingestion") -> logging.Logger:
 
     logger.addHandler(handler)
     logger.propagate = False
+    logger.info(f"Logger configured with level {level}")
     return logger
     

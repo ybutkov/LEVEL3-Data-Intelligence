@@ -2,6 +2,10 @@ api:
   version: v1
   base_url: https://lh-proxy.onrender.com
 
+logger:
+  level: debug
+  datetime_format: "%Y-%m-%dT%H:%M:%S"
+
 secrets:
   secret_scope: lufthansa_proxy
   password_key: password
@@ -12,11 +16,12 @@ storage:
   silver_schema: lufthansa_silver
   gold_schema: lufthansa_gold
   landing_volume: landing_area/tmp
+  autoloader_volume: autoloader_metadata
 
 path_template:
   landing_dir: "/Volumes/{catalog}/{bronze_schema}/{landing_volume}/{entity}/"
   time_template:
-    dayly: "%Y-%m-%d/"
+    daily: "%Y-%m-%d/"
     monthly: "%Y-%m/"
   file_name: "offset_{offset:05d}_limit_{limit}.json"
   # file_name: "page_{page:03d}_offset_{offset:05d}_limit_{limit}.json"
