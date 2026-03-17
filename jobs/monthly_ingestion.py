@@ -1,22 +1,45 @@
 from app.init_app import init_app
-from services.ingestion_service import get_and_save_all_pages
-from config.endpoints import EndpointKeys
 from app.logger import get_logger
+from config.endpoints import EndpointKeys
+from services.ingestion_service import get_and_save_all_pages
+from services.storage_service import load_json_to_bronze_autoloader
 
-def monthly_bronze_lufthansa_ingestion():
-    get_and_save_all_pages(EndpointKeys.COUNTRIES, limit=100, time_period="monthly")
-    get_and_save_all_pages(EndpointKeys.CITIES, limit=100, time_period="monthly")
-    get_and_save_all_pages(EndpointKeys.AIRPORTS, limit=100, time_period="monthly")
-    get_and_save_all_pages(EndpointKeys.AIRLINES, limit=100, time_period="monthly")
-    get_and_save_all_pages(EndpointKeys.AIRCRAFT, limit=100, time_period="monthly")
 
-def main():
+def ingest_reference_entity_monthly(endpoint):
+    logger = get_logger(__name__)
+
+    logger.info(f"Start monthly reference ingest for {endpoint.value}")
+    get_and_save_all_pages(
+        endpoint=endpoint,
+        limit=100,
+        time_period="monthly",
+    )
+
+    load_json_to_bronze_autoloader(
+        endpoint=endpoint,
+        time_period="monthly",
+    )
+    logger.info(f"Finish monthly reference ingest for {endpoint.value}")
+
+
+def ingest_references_monthly():
+    logger = get_logger("jobs.ingestion_monthly")
+    logger.info("Start monthly references ingestion job")
     init_app()
-    logger = get_logger("jobs.monthly_bronze_lufthansa_ingestion")
-    logger.info("Starting monthly bronze ingestion for lufthansa")
-    monthly_bronze_lufthansa_ingestion()
-    logger.info("Finished monthly bronze ingestion for lufthansa")
+    reference_endpoints = [
+        EndpointKeys.AIRPORTS,
+        EndpointKeys.CITIES,
+        EndpointKeys.COUNTRIES,
+        EndpointKeys.AIRLINES,
+        EndpointKeys.AIRCRAFT,
+    ]
 
- 
-if __name__ == "__main__":
-    main()
+    for endpoint in reference_endpoints:
+        try:
+            ingest_reference_entity_monthly(endpoint)
+        except Exception as e:
+            logger.exception(f"Monthly ingest failed for {endpoint.value}: {e}")
+            logger.warning(f"Sent message to Kafka")
+
+    logger.info("Finish monthly references ingestion job")
+

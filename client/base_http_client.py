@@ -27,7 +27,7 @@ class BaseHttpClient:
     def post(self, path, params=None, json=None, headers=None, timeout=None):
         if timeout is None:
             timeout = self.defaultTimeout
-
+        headers = headers or self.headers
         response = self.session.post(
             f"{self.base_url}{path}",
             params=params,

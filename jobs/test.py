@@ -50,9 +50,9 @@ def test_fetch():
     print(response.json())
 
 def test_get_and_save_all_pages():
-    get_and_save_all_pages(EndpointKeys.COUNTRIES, limit=100, time_period="monthly")
+    # get_and_save_all_pages(EndpointKeys.COUNTRIES, limit=100, time_period="monthly")
     # get_and_save_all_pages(EndpointKeys.CITIES, limit=100, time_period="monthly")
-    # get_and_save_all_pages(EndpointKeys.AIRPORTS, limit=100, time_period="monthly")
+    get_and_save_all_pages(EndpointKeys.AIRPORTS, limit=100, time_period="monthly")
     # get_and_save_all_pages(EndpointKeys.AIRLINES, limit=100, time_period="monthly")
     # get_and_save_all_pages(EndpointKeys.AIRCRAFT, limit=100, time_period="monthly")
 
@@ -68,20 +68,47 @@ def test_logger():
 def test_bronze_autoloader():
     logger = get_logger("test_bronze_autoloader")
     logger.info("test_bronze_autoloader")
-    get_and_save_all_pages(EndpointKeys.COUNTRIES, limit=50, time_period="daily")
+    # get_and_save_all_pages(EndpointKeys.COUNTRIES, limit=100, time_period="daily")
+    # load_json_to_bronze_autoloader(EndpointKeys.COUNTRIES, time_period="daily")
     # get_and_save_all_pages(EndpointKeys.COUNTRIES, limit=100, time_period="monthly")
-    load_json_to_bronze_autoloader(EndpointKeys.COUNTRIES, time_period="daily")
+    # load_json_to_bronze_autoloader(EndpointKeys.COUNTRIES, time_period="monthly")
+    load_json_to_bronze_autoloader(EndpointKeys.AIRPORTS, time_period="monthly")
+
+def test_flight_status():
+    # https://lh-proxy.onrender.com/v1/operations/flightstatus/route/FRA/ZRH/2026-03-16
+    path_params = {
+        "departure_airport_code": "FRA",
+        "arrival_airport_code": "ZRH",
+        "date": "2026-03-16"
+    }
+    get_and_save_all_pages(EndpointKeys.FLIGHTSTATUS_BY_ROUTE, path_params=path_params, limit=2)
+
+def test_flight_schedule():
+    # https://lh-proxy.onrender.com/v1/flight-schedules/flightschedules/passenger?airlines=LH&startDate=10MAR26&endDate=15MAR26&daysOfOperation=1234567&timeMode=UTC
+    query_params = {
+        "airlines": "LH",
+        "startDate": "10MAR26",
+        "endDate": "15MAR26",
+        "daysOfOperation": "1234567",
+        "timeMode": "UTC"
+    }
+    get_and_save_all_pages(EndpointKeys.FLIGHT_SCHEDULES, query_params=query_params)
+
+
 
 def main():
     init_app()
     # config = get_ConfigProperties()
     # logger = get_logger("test_logger")
     # test_logger()
-    test_bronze_autoloader()
+    # test_bronze_autoloader()
     # test_config(config)
     # test_fetch()
-    test_get_and_save_all_pages()
+    # test_get_and_save_all_pages()
     # get_and_save_all_pages(EndpointKeys.COUNTRIES, limit=100, time_period="dayly")
+    test_get_and_save_all_pages()
+    test_flight_schedule()
+    # test_flight_status()
     
  
 if __name__ == "__main__":

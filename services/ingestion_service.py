@@ -27,7 +27,7 @@ def fetch_data(url, query_params=None, max_retries=3, timeout=20):
                 params=query_params,
                 timeout=timeout,
             )
-
+            # if in (429, 500, 502, 503, 504)
             if response.status_code in {HTTPStatus.TOO_MANY_REQUESTS,
                                         HTTPStatus.INTERNAL_SERVER_ERROR,
                                         HTTPStatus.BAD_GATEWAY,
@@ -50,58 +50,53 @@ def get_full_save_path(endpoint, page=None, offset=None, limit=None, time_period
     config = get_endpoint_config(endpoint)
 
     configProperties = get_ConfigProperties()
-
     landing_dir = configProperties.path_template.landing_dir.format(
         catalog=configProperties.storage.catalog,
         bronze_schema=configProperties.storage.bronze_schema,
         landing_volume=configProperties.storage.landing_volume,
         entity=endpoint.value,
     )
+    time = datetime.datetime.now()
+    # TODO: Make time_period="default" for default value
     if time_period in ("daily", "monthly"):
-        # time_dir = datetime.datetime.now().strftime(cfg.path_template.time_template.monthly)
-        time_dir = datetime.datetime.now().strftime(configProperties.path_template.time_template[time_period])
+        # time_dir = datetime.datetime.now().strftime(cfg.path_template.dir_time_template.monthly)
+        dir_time = datetime.datetime.now().strftime(configProperties.path_template.dir_time_template[time_period])
     else:
-        time_dir = ""
+        dir_time = datetime.datetime.now().strftime(configProperties.path_template.dir_time_template["default"])
+    file_name_datetime_prefix = time.strftime(configProperties.path_template.file_name.datetime_prefix)
     if offset is None or limit is None:
-        file_name = configProperties.path_template.file_name_single
+        file_name = configProperties.path_template.file_name.single_name
     else:
-        file_name = configProperties.path_template.file_name.format(
+        file_name = configProperties.path_template.file_name.with_offset.format(
+            # TODO: without page ?
             page=page,
             offset=offset,
             limit=limit
             )
-    full_save_path = f"{landing_dir}{time_dir}{file_name}"
+    full_save_path = f"{landing_dir}{dir_time}/{file_name_datetime_prefix}{file_name}"
     return full_save_path
-
-# def get_full_save_path_old(endpoint, offset=None, time_dir=None):
-#     cfg = get_config()
-#     name = endpoint.value
-#     filename = name
-#     if offset or offset == 0:
-#         filename = f"{filename}_{offset}"
-#     filename = f"{filename}.json"
-#     if time_dir:
-#         target_dir = f"{cfg.landing.landing_root}/{name}/{time_dir}"
-#     else:
-#         target_dir = f"{cfg.landing.landing_root}/{name}"
-#     full_save_path = f"{target_dir}/{filename}"
-#     # print(f"get_full_save_path combine path={full_save_path} offset={offset}")
-#     return full_save_path
 
 def build_url_for_endpoint(endpoint, path_params=None):
     return build_endpoint_path(endpoint, **(path_params or {}))
 
-def get_total_count(data):
-    resource = next(iter(data.values()), {})
-    return resource.get("Meta", {}).get("TotalCount")
+def is_valid_response(data, endpoint_config) -> bool:
+    if data is None:
+        return False
+    if endpoint_config.validation_path:
+        return get_value_by_path(data, endpoint_config.validation_path) is not None
+    if endpoint_config.resource_key:
+        return get_value_by_path(data, (endpoint_config.resource_key,)) is not None
+    if endpoint_config.collection_path:
+        return get_value_by_path(data, endpoint_config.collection_path) is not None
+    return isinstance(data, (dict, list))
 
 # endpoint -> url
 def get_split_and_save_request(
         endpoint,
         path_params=None,
         query_params=None,
-        offset=0,
-        limit=20,
+        offset=None,
+        limit=None,
         time_period=None,
         failed_offsets=None):
     
@@ -111,23 +106,24 @@ def get_split_and_save_request(
         failed_offsets = []
     data = None
     path_params = path_params or {}
-    query_params = query_params or {}
+    page_query_params = query_params or {}
 
     try:
-        logger.info(f"Request: {endpoint.value} offset={offset} limit={limit}")
-        page_query_params = {
-            **query_params,
-            "limit": limit,
-            "offset": offset,
-        }
-        url = build_url_for_endpoint(endpoint, path_params or {})
+        if endpoint_config.paginable:
+            logger.info(f"Request: {endpoint.value} offset={offset} limit={limit}")
+            page_query_params.update({"limit": limit, "offset": offset})
+        else:
+            logger.info(f"Request: {endpoint.value}")
+        url = build_url_for_endpoint(endpoint, path_params)
         response = fetch_data(
             url=url,
             query_params=page_query_params,
         )
         data = response.json()
-        if (get_value_by_path(data, (endpoint_config.resource_key,)) is None):
-            raise ValueError("Fetching Error")
+        # if (endpoint_config.resource_key is not None and get_value_by_path(data, (endpoint_config.resource_key,)) is None):
+        #     raise ValueError("Fetching Error")
+        if not is_valid_response(data, endpoint_config):
+            raise ValueError("Fetching Error: response structure is not valid")
         full_save_path = get_full_save_path(
             endpoint=endpoint,
             offset=offset,
@@ -135,11 +131,15 @@ def get_split_and_save_request(
             time_period=time_period
         )
         save_json_with_dbutils(data, full_save_path, True, 2)
-        logger.info(f"Saved endpoint={endpoint.value} offset={offset} limit={limit} path={full_save_path}")
+        if endpoint_config.paginable:
+            logger.info(f"Saved endpoint: {endpoint.value} offset={offset} limit={limit} path={full_save_path}")
+        else:
+            logger.info(f"Saved endpoint: {endpoint.value} path={full_save_path}")                    
         return data, failed_offsets
 
     except Exception as e:
-        logger.exception(f"Request failed endpoint={endpoint.value} offset={offset} limit={limit} error={e}")
+        # TODO: Check before paginable or not and type of error
+        logger.exception(f"Request failed endpoint={endpoint.value} offset={offset} limit={limit} error: {e}")
         if limit <= 1:
             logger.error(f"Skipping bad record endpoint={endpoint.value} offset={offset} limit={limit}")
             # TODO: Should write to file error json ?
@@ -173,11 +173,11 @@ def get_and_save_all_pages(
         endpoint,
         path_params=None,
         query_params=None,
-        limit=100,
+        limit=20,
         time_period=None):
     
     logger = get_logger(__name__)
-    logger.info(f"Start retrieving data for {endpoint.value}")
+    logger.info(f"Start retrieving data. Endpoint: {endpoint.value}")
     if query_params:
         query_params = query_params.copy() 
     else:
@@ -186,6 +186,9 @@ def get_and_save_all_pages(
     offset = 0
     total = None
     endpoint_config = get_endpoint_config(endpoint)
+    if endpoint_config.paginable is False:
+        offset = None
+        limit = None
     failed_offsets = []
 
     while True:
@@ -196,7 +199,9 @@ def get_and_save_all_pages(
                                                     limit=limit,
                                                     time_period=time_period,
                                                     failed_offsets=failed_offsets)
-      
+        # TODO: Check error?
+        if endpoint_config.paginable is False:
+            break
         # TODO: total started from None !!!
         # logger.info(f"From {url} loaded page {offset} from {total}")
         
@@ -218,9 +223,9 @@ def get_and_save_all_pages(
         # TODO: Add loading until offset >= total or empty result
         if total and offset >= total:
             if failed_offsets:
-                logger.warning(f"Failed offsets: {failed_offsets}. Sent to Kafka")
+                logger.warning(f"Failed offsets: {failed_offsets}. Endpoint: {endpoint.value} Sent to Kafka")
             break
-    logger.info(f"Finish retrieving data for {endpoint.value}")
+    logger.info(f"Finish retrieving data. Endpoint: {endpoint.value}")
 
 # def get_flights(origin, destination, date, query_params=None):
 #     headers = get_headers()

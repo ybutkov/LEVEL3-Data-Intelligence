@@ -100,6 +100,7 @@ def get_bronze_table_name(endpoint) -> str:
 
     return f"{configProperties.storage.catalog}.{configProperties.storage.bronze_schema}.{endpoint_config.bronze_table}"
 
+# TODO: time_period ?
 def load_json_to_bronze_autoloader(endpoint, time_period: str | None = None):
     logger = get_logger(__name__)
     spark = get_spark()
@@ -179,6 +180,8 @@ def load_json_to_bronze_autoloader(endpoint, time_period: str | None = None):
     # finally:
     #     if query.isActive:
     #         query.stop()
+
+    # spark.stop()
     logger.info(f"Finished Auto Loader endpoint:{endpoint.value} source={source_path} bronze_table={bronze_table}")
 
 # **************************************************************

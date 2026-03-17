@@ -1,8 +1,7 @@
-from functools import lru_cache
-
 from pyspark.sql import SparkSession
 from pyspark.dbutils import DBUtils
 from app.logger import get_logger
+# from functools import lru_cache
 
 def is_spark_session_alive(spark: SparkSession)->bool:
     try:
@@ -15,7 +14,9 @@ def is_spark_session_alive(spark: SparkSession)->bool:
 
 # @lru_cache(maxsize=1)
 def get_spark() -> SparkSession:
-    spark = SparkSession.getActiveSession()
+    # spark = SparkSession.getActiveSession()
+    spark = SparkSession.builder.getOrCreate()
+
     # if spark is None:
     #     spark = SparkSession.builder.getOrCreate()
     if spark is None:

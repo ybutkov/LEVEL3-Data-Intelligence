@@ -11,19 +11,24 @@ secrets:
   password_key: password
 
 storage:
-  catalog: main
-  bronze_schema: lufthansa_bronze
-  silver_schema: lufthansa_silver
-  gold_schema: lufthansa_gold
-  landing_volume: landing_area/tmp
+  catalog: lufthansa_level
+  bronze_schema: bronze
+  silver_schema: silver
+  gold_schema: gold
+  landing_volume: landing_area
   autoloader_volume: autoloader_metadata
 
+# full_save_path = "{landing_dir}{dir_time}/{file_name_datetime_prefix}{file_name}"
 path_template:
   landing_dir: "/Volumes/{catalog}/{bronze_schema}/{landing_volume}/{entity}/"
-  time_template:
-    daily: "%Y-%m-%d/"
-    monthly: "%Y-%m/"
-  file_name: "offset_{offset:05d}_limit_{limit}.json"
+  dir_time_template:
+    daily: "%Y-%m-%d"
+    monthly: "%Y-%m"
+    default: "%Y-%m"
+  file_name:
+    datetime_prefix: "%Y%m%dT%H%M%S_"
+    single_name: "data.json"
+    with_offset: "offset_{offset:05d}_limit_{limit}.json"
   # file_name: "page_{page:03d}_offset_{offset:05d}_limit_{limit}.json"
   file_name_single: "data.json"
   

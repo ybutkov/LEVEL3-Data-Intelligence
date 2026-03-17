@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 from typing import Any
 from dataclasses import dataclass
 from typing import List
+from typing import Optional
 
 class EndpointKeys(str, Enum):
     AIRPORTS = "airports"
@@ -16,6 +17,7 @@ class EndpointKeys(str, Enum):
     AIRCRAFT = "aircraft"
     AIRCRAFT_BY_CODE = "aircraft_code"
     FLIGHTSTATUS_BY_ROUTE = "flightstatus_by_route"
+    FLIGHT_SCHEDULES = "flight_schedules"
     
 @dataclass(frozen=True)
 class EndpointConfig:
@@ -32,7 +34,9 @@ class EndpointConfig:
 
     path_params: tuple[str, ...] = ()
     query_params: tuple[str, ...] = ()
-
+    paginable: bool = True
+    validation_path: Optional[tuple] = None
+    
 
 ENDPOINT_CONFIGS: dict[EndpointKeys, EndpointConfig] = {
     EndpointKeys.COUNTRIES: EndpointConfig(
@@ -45,6 +49,7 @@ ENDPOINT_CONFIGS: dict[EndpointKeys, EndpointConfig] = {
         bronze_table="countries_raw",
         silver_table="countries",
         query_params=("offset", "limit", "lang"),
+        paginable=True,
     ),
         EndpointKeys.CITIES: EndpointConfig(
         key=EndpointKeys.CITIES,
@@ -56,6 +61,7 @@ ENDPOINT_CONFIGS: dict[EndpointKeys, EndpointConfig] = {
         bronze_table="cities_raw",
         silver_table="cities",
         query_params=("offset", "limit", "lang"),
+        paginable=True,
     ),
     EndpointKeys.AIRPORTS: EndpointConfig(
         key=EndpointKeys.AIRPORTS,
@@ -67,6 +73,7 @@ ENDPOINT_CONFIGS: dict[EndpointKeys, EndpointConfig] = {
         bronze_table="airports_raw",
         silver_table="airports",
         query_params=("offset", "limit", "lang"),
+        paginable=True,
     ),
     EndpointKeys.AIRLINES: EndpointConfig(
         key=EndpointKeys.AIRLINES,
@@ -78,6 +85,7 @@ ENDPOINT_CONFIGS: dict[EndpointKeys, EndpointConfig] = {
         bronze_table="airlines_raw",
         silver_table="airlines",
         query_params=("offset", "limit", "lang"),
+        paginable=True,
     ),
     EndpointKeys.AIRCRAFT: EndpointConfig(
         key=EndpointKeys.AIRCRAFT,
@@ -89,6 +97,7 @@ ENDPOINT_CONFIGS: dict[EndpointKeys, EndpointConfig] = {
         bronze_table="aircraft_raw",
         silver_table="aircraft",
         query_params=("offset", "limit", "lang"),
+        paginable=True,
     ),
     EndpointKeys.FLIGHTSTATUS_BY_ROUTE: EndpointConfig(
         key=EndpointKeys.FLIGHTSTATUS_BY_ROUTE,
@@ -101,6 +110,21 @@ ENDPOINT_CONFIGS: dict[EndpointKeys, EndpointConfig] = {
         silver_table="flightstatus_by_route",
         path_params=("departure_airport_code", "arrival_airport_code", "date"),
         query_params=("offset", "limit", "lang"),
+        paginable=True,
+    ),
+    # https://lh-proxy.onrender.com/v1/flight-schedules/flightschedules/passenger?airlines=LH&startDate=10MAR26&endDate=15MAR26&daysOfOperation=1234567&timeMode=UTC
+    EndpointKeys.FLIGHT_SCHEDULES: EndpointConfig(
+        key=EndpointKeys.FLIGHT_SCHEDULES,
+        path="/flight-schedules/flightschedules/passenger",
+        resource_key=None,
+        collection_path=None,
+        total_count_path=None,
+        raw_folder="flight_schedules",
+        bronze_table="flight_schedules_raw",
+        silver_table="flight_schedules",
+        query_params=("airlines", "flightNumberRanges", "startDate", "endDate", "daysOfOperation", "timeMode"),
+        paginable=False,
+        validation_path=(0, "airline"),
     ),
 }
 
