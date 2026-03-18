@@ -117,6 +117,7 @@ def load_json_to_bronze_autoloader(endpoint, time_period: str | None = None):
         return
     get_dbutils().fs.mkdirs(schema_location)
     get_dbutils().fs.mkdirs(checkpoint_location)
+    get_dbutils().fs.mkdirs(source_path)
     df = (
         spark.readStream
         .format("cloudFiles")
@@ -141,15 +142,15 @@ def load_json_to_bronze_autoloader(endpoint, time_period: str | None = None):
             "bronze_ingested_at",
         )
     )
-    logger.debug("1")
+    # logger.debug("1")
     query = None
     
     # delete from
-    active = spark.streams.active
-    logger.info(f"active streams count={len(active)}")
-    for q in active:
-        logger.info(f"active stream id={q.id} name={q.name} status={q.status}")
-    logger.debug(f"table exists = {spark.catalog.tableExists(bronze_table)}")
+    # active = spark.streams.active
+    # logger.info(f"active streams count={len(active)}")
+    # for q in active:
+    #     logger.info(f"active stream id={q.id} name={q.name} status={q.status}")
+    # logger.debug(f"table exists = {spark.catalog.tableExists(bronze_table)}")
     # to 
 
     try:
@@ -160,11 +161,11 @@ def load_json_to_bronze_autoloader(endpoint, time_period: str | None = None):
             .trigger(availableNow=True)
             .toTable(bronze_table)
         )
-        logger.debug("2")
+        # logger.debug("2")
         query.awaitTermination()
     finally:
         if query is not None and query.isActive:
-            logger.debug("3")
+            # logger.debug("3")
             query.stop()
 
     # query = (
@@ -174,7 +175,7 @@ def load_json_to_bronze_autoloader(endpoint, time_period: str | None = None):
     #     .trigger(availableNow=True)
     #     .toTable(bronze_table)
     # )
-    logger.debug("4")
+    # logger.debug("4")
     # try:
     #     query.awaitTermination()
     # finally:
@@ -274,22 +275,4 @@ def load_data_to_bronze(endpoint_key):
         .saveAsTable(target_table)
 
     print(f"Loaded data into {target_table}")
-
-# def load_countries_to_bronze(endpoint_key):
-#   entity = endpoint_key.value
-#   target_dir = f"{PROFILE.get(ProfileKeys.LANDING_ROOT)}/{entity}"
-#   full_source_path = f"{target_dir}/*.json"
-#   target_table = PROFILE.get(ProfileKeys.BRONZE_ROOT).format(entity_name= entity)
-
-#   raw_df = (spark.read.option("multiline", "true").json(full_source_path))
-  
-#   # CountryResource -> Countries -> Country
-#   df_exploded = (raw_df.select(F.explode("CountryResource.Countries.Country").alias("country_data")))
-
-#   df_final = (df_exploded.select("country_data.*")
-#               # .withColumn("_source_file", F.input_file_name())
-#               # .withColumn("_ingestion_timestamp", F.current_timestamp())
-#               )
-
-#   df_final.write.format("delta").mode("overwrite").option("mergeSchema", "true").saveAsTable(target_table)
-#   print(f"Таблица {target_table} создана. Загружено строк: {df_final.count()}")    
+   

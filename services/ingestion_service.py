@@ -5,7 +5,8 @@ import datetime
 import time
 import requests
 from config.endpoints import get_endpoint_config
-from config.endpoints import build_endpoint_path
+
+# from config.endpoints import build_endpoint_path
 from util.json_utils import get_value_by_path
 from services.storage_service import save_json_with_dbutils
 from app.logger import get_logger
@@ -50,12 +51,13 @@ def get_full_save_path(endpoint, page=None, offset=None, limit=None, time_period
     config = get_endpoint_config(endpoint)
 
     configProperties = get_ConfigProperties()
-    landing_dir = configProperties.path_template.landing_dir.format(
-        catalog=configProperties.storage.catalog,
-        bronze_schema=configProperties.storage.bronze_schema,
-        landing_volume=configProperties.storage.landing_volume,
-        entity=endpoint.value,
-    )
+    # landing_dir = configProperties.path_template.landing_dir.format(
+    #     catalog=configProperties.storage.catalog,
+    #     bronze_schema=configProperties.storage.bronze_schema,
+    #     landing_volume=configProperties.storage.landing_volume,
+    #     entity=endpoint.value,
+    # )
+    landing_dir = config.build_landing_path(configProperties)
     time = datetime.datetime.now()
     # TODO: Make time_period="default" for default value
     if time_period in ("daily", "monthly"):
@@ -76,8 +78,8 @@ def get_full_save_path(endpoint, page=None, offset=None, limit=None, time_period
     full_save_path = f"{landing_dir}{dir_time}/{file_name_datetime_prefix}{file_name}"
     return full_save_path
 
-def build_url_for_endpoint(endpoint, path_params=None):
-    return build_endpoint_path(endpoint, **(path_params or {}))
+# def build_url_for_endpoint(endpoint, path_params=None):
+#     return build_endpoint_path(endpoint, **(path_params or {}))
 
 def is_valid_response(data, endpoint_config) -> bool:
     if data is None:
@@ -90,7 +92,7 @@ def is_valid_response(data, endpoint_config) -> bool:
         return get_value_by_path(data, endpoint_config.collection_path) is not None
     return isinstance(data, (dict, list))
 
-# endpoint -> url
+# endpoint -> url ?
 def get_split_and_save_request(
         endpoint,
         path_params=None,
@@ -114,7 +116,8 @@ def get_split_and_save_request(
             page_query_params.update({"limit": limit, "offset": offset})
         else:
             logger.info(f"Request: {endpoint.value}")
-        url = build_url_for_endpoint(endpoint, path_params)
+        # url = build_url_for_endpoint(endpoint, path_params)
+        url = endpoint_config.build_endpoint_path(path_params)
         response = fetch_data(
             url=url,
             query_params=page_query_params,
@@ -215,7 +218,7 @@ def get_and_save_all_pages(
         offset += limit
         page += 1
 
-        # TODO: Delete. rewrite to load until empty
+        # TODO: Delete. for testing
         # if page > 4:
         #     print("Failed offsets:", failed_offsets)
         #     break
@@ -226,26 +229,3 @@ def get_and_save_all_pages(
                 logger.warning(f"Failed offsets: {failed_offsets}. Endpoint: {endpoint.value} Sent to Kafka")
             break
     logger.info(f"Finish retrieving data. Endpoint: {endpoint.value}")
-
-# def get_flights(origin, destination, date, query_params=None):
-#     headers = get_headers()
-#     path_template = cfg.ENDPOINTS.get(cfg.EndpointKeys.FLIGHTSTATUS_BY_ROUTE)
-#     full_path = path_template.format(origin=origin, destination=destination, date=date)
-#     full_url = f"{cfg.PROXY_BASE_URL}{cfg.API_VERSION}{full_path}"
-#     response = requests.get(full_url, headers=headers, params=query_params)
-#     return response
-
-# def get_and_save_data(endpoint, path_params=None, query_params=None, limit=100):
-#     if endpoint in cfg.LIST_ENDPOINTS:
-#         return get_and_save_all_pages(
-#             endpoint=endpoint,
-#             path_params=path_params,
-#             query_params=query_params,
-#             limit=limit,
-#         )
-
-#     return get_and_save_one(
-#         endpoint=endpoint,
-#         path_params=path_params,
-#         query_params=query_params,
-#     )

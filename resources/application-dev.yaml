@@ -20,7 +20,7 @@ storage:
 
 # full_save_path = "{landing_dir}{dir_time}/{file_name_datetime_prefix}{file_name}"
 path_template:
-  landing_dir: "/Volumes/{catalog}/{bronze_schema}/{landing_volume}/{entity}/"
+  landing_dir: "/Volumes/{catalog}/{bronze_schema}/{landing_volume}/{raw_folder}/"
   dir_time_template:
     daily: "%Y-%m-%d"
     monthly: "%Y-%m"

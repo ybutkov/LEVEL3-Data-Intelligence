@@ -26,6 +26,9 @@ def get_spark() -> SparkSession:
     is_spark_session_alive(spark)
     return spark
 
+# def get_spark() -> SparkSession:
+#     return spark
+
 # @lru_cache(maxsize=1)
 def get_dbutils() -> DBUtils:
   return DBUtils(get_spark())
