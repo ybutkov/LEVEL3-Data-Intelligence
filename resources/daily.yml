@@ -1,0 +1,21 @@
+resources:
+  jobs:
+    daily_bronze_ingestion:
+      name: daily_bronze_ingestion
+      tasks:
+        - task_key: bronze_daily_task
+          spark_python_task:
+            python_file: ../src/1_bronze/daily.py
+          environment_key: default
+      queue:
+        enabled: true
+      environments:
+        - environment_key: default
+          spec:
+            environment_version: "5"
+      performance_target: PERFORMANCE_OPTIMIZED
+      max_concurrent_runs: 1
+      schedule:
+        quartz_cron_expression: "0 0 * * * ?"
+        timezone_id: "UTC"
+        pause_status: "UNPAUSED"
