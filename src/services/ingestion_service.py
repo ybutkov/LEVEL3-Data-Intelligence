@@ -87,7 +87,8 @@ def fetch_data(url, query_params=None, max_retries=5, timeout=20):
             
             if status_code in NON_RETRYABLE_STATUS_CODES:
                 logger.error(f"Non-retryable status code {status_code}")
-                raise ValueError(f"Non-retryable HTTP error {status_code}")
+                # Let requests.raise_for_status() raise a requests.HTTPError
+                response.raise_for_status()
 
             response.raise_for_status()
             return response
@@ -111,13 +112,13 @@ def fetch_data(url, query_params=None, max_retries=5, timeout=20):
         
         except requests.HTTPError as e:
             status_code = e.response.status_code if e.response is not None else None
-            
+
             if status_code in RETRYABLE_STATUS_CODES:
                 last_error = RuntimeError(f"Retryable HTTP error {status_code}")
                 if attempt == max_retries:
                     logger.error(f"Max retries exceeded on HTTP error {status_code}")
                     raise last_error
-                
+
                 sleep_seconds = min(delay, 20.0) + random.uniform(0, 0.5)
                 logger.warning(
                     f"Retryable HTTP error {status_code}. "
@@ -127,7 +128,8 @@ def fetch_data(url, query_params=None, max_retries=5, timeout=20):
                 delay *= 2.0
             else:
                 logger.error(f"Non-retryable HTTP error {status_code}")
-                raise ValueError(f"HTTP error {status_code}") from e
+                # Re-raise the original HTTPError so callers can inspect status_code
+                raise
 
 
 def get_split_and_save_request(
@@ -173,21 +175,31 @@ def get_split_and_save_request(
         )
         save_json_with_dbutils(data, full_save_path, True, 2)
         
-        if endpoint_config.paginable:
-            logger.info(f"Saved endpoint: {endpoint.value} offset={offset} limit={limit} path={full_save_path}")
-        else:
-            logger.info(f"Saved endpoint: {endpoint.value} path={full_save_path}")
+        # if endpoint_config.paginable:
+        #     logger.debug(f"Saved endpoint: {endpoint.value} offset={offset} limit={limit} path={full_save_path}")
+        # else:
+        #     logger.debug(f"Saved endpoint: {endpoint.value} path={full_save_path}")
         
         return data, failed_offsets
 
     except Exception as e:
+        # TODO: Check before paginable or not and type of error
         logger.exception(f"Request failed endpoint={endpoint.value} offset={offset} limit={limit} error: {e}")
-        if not limit or limit <= 1:
-            logger.error(f"Skipping bad record endpoint={endpoint.value} offset={offset} limit={limit}")
-            if offset is not None:
-                failed_offsets.append(offset)
-            return data, failed_offsets
-        
+
+        # If this is a non-retryable HTTP error, re-raise so caller can handle it
+        if isinstance(e, requests.HTTPError):
+            status = e.response.status_code if getattr(e, "response", None) is not None else None
+            if status in NON_RETRYABLE_STATUS_CODES:
+                raise
+
+        if isinstance(e, ValueError):
+            logger.warning(f"Parsing/validation error for endpoint={endpoint.value} offset={offset}: {e}")
+            if not limit or limit <= 1:
+                if offset is not None:
+                    failed_offsets.append(offset)
+                return data, failed_offsets
+
+        # Split and retry recursively for retryable/unknown errors
         left_part = limit // 2
         right_part = limit - left_part
 
