@@ -28,7 +28,7 @@ def ingest_operational_daily():
     logger.info("Start daily operational ingestion job")
 
     # TODO: Put logic for ingesting all endpoints here
-    for _ in range(5):
+    for _ in range(2):
         path_params = {
             "origin": "FRA",
             "destination": "ZRH",
