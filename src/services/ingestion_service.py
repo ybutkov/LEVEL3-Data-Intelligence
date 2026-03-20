@@ -1,20 +1,20 @@
-from app.clients import get_lufthansa_client
-from config.config_properties import get_ConfigProperties
-# from utils.ingestion_utils import *
+from src.app.clients import get_lufthansa_client
+from src.config.config_properties import get_ConfigProperties
+from src.config.endpoints import get_endpoint_config
+from src.util.json_utils import get_value_by_path
+from src.services.storage_service import save_json_with_dbutils
+from src.app.logger import get_logger
+
+from http import HTTPStatus
 import datetime
 import time
 import requests
-from config.endpoints import get_endpoint_config
 
-# from config.endpoints import build_endpoint_path
-from util.json_utils import get_value_by_path
-from services.storage_service import save_json_with_dbutils
-from app.logger import get_logger
-from http import HTTPStatus
 
+logger = get_logger(__name__)
 
 def fetch_data(url, query_params=None, max_retries=3, timeout=20):
-    logger = get_logger()
+    # logger = get_logger()
     if not url:
         logger.error(f"Empty url: {url}")
         raise ValueError(f"Empty url: {url}")
@@ -47,51 +47,6 @@ def fetch_data(url, query_params=None, max_retries=3, timeout=20):
                 raise
             time.sleep(2 ** (attempt - 1))
 
-def get_full_save_path(endpoint, page=None, offset=None, limit=None, time_period=None):
-    config = get_endpoint_config(endpoint)
-
-    configProperties = get_ConfigProperties()
-    # landing_dir = configProperties.path_template.landing_dir.format(
-    #     catalog=configProperties.storage.catalog,
-    #     bronze_schema=configProperties.storage.bronze_schema,
-    #     landing_volume=configProperties.storage.landing_volume,
-    #     entity=endpoint.value,
-    # )
-    landing_dir = config.build_landing_path(configProperties)
-    time = datetime.datetime.now()
-    # TODO: Make time_period="default" for default value
-    if time_period in ("daily", "monthly"):
-        # time_dir = datetime.datetime.now().strftime(cfg.path_template.dir_time_template.monthly)
-        dir_time = datetime.datetime.now().strftime(configProperties.path_template.dir_time_template[time_period])
-    else:
-        dir_time = datetime.datetime.now().strftime(configProperties.path_template.dir_time_template["default"])
-    file_name_datetime_prefix = time.strftime(configProperties.path_template.file_name.datetime_prefix)
-    if offset is None or limit is None:
-        file_name = configProperties.path_template.file_name.single_name
-    else:
-        file_name = configProperties.path_template.file_name.with_offset.format(
-            # TODO: without page ?
-            page=page,
-            offset=offset,
-            limit=limit
-            )
-    full_save_path = f"{landing_dir}{dir_time}/{file_name_datetime_prefix}{file_name}"
-    return full_save_path
-
-# def build_url_for_endpoint(endpoint, path_params=None):
-#     return build_endpoint_path(endpoint, **(path_params or {}))
-
-def is_valid_response(data, endpoint_config) -> bool:
-    if data is None:
-        return False
-    if endpoint_config.validation_path:
-        return get_value_by_path(data, endpoint_config.validation_path) is not None
-    if endpoint_config.resource_key:
-        return get_value_by_path(data, (endpoint_config.resource_key,)) is not None
-    if endpoint_config.collection_path:
-        return get_value_by_path(data, endpoint_config.collection_path) is not None
-    return isinstance(data, (dict, list))
-
 # endpoint -> url ?
 def get_split_and_save_request(
         endpoint,
@@ -102,8 +57,9 @@ def get_split_and_save_request(
         time_period=None,
         failed_offsets=None):
     
-    logger = get_logger(__name__)
+    # logger = get_logger(__name__)
     endpoint_config = get_endpoint_config(endpoint)
+    configProperties = get_ConfigProperties()
     if failed_offsets is None:
         failed_offsets = []
     data = None
@@ -123,16 +79,16 @@ def get_split_and_save_request(
             query_params=page_query_params,
         )
         data = response.json()
-        # if (endpoint_config.resource_key is not None and get_value_by_path(data, (endpoint_config.resource_key,)) is None):
-        #     raise ValueError("Fetching Error")
-        if not is_valid_response(data, endpoint_config):
-            raise ValueError("Fetching Error: response structure is not valid")
-        full_save_path = get_full_save_path(
-            endpoint=endpoint,
+        if not endpoint_config.is_valid_response(data):
+            raise ValueError("Fetching Error: response structure is not valid!!")
+        full_save_path = endpoint_config.build_full_file_name(
+            configProperties=configProperties,
+            path_params=path_params,
             offset=offset,
             limit=limit,
             time_period=time_period
         )
+        # TODO: Should we format json for raw string?
         save_json_with_dbutils(data, full_save_path, True, 2)
         if endpoint_config.paginable:
             logger.info(f"Saved endpoint: {endpoint.value} offset={offset} limit={limit} path={full_save_path}")
@@ -179,7 +135,7 @@ def get_and_save_all_pages(
         limit=20,
         time_period=None):
     
-    logger = get_logger(__name__)
+    # logger = get_logger(__name__)
     logger.info(f"Start retrieving data. Endpoint: {endpoint.value}")
     if query_params:
         query_params = query_params.copy() 
@@ -207,7 +163,7 @@ def get_and_save_all_pages(
             break
         # TODO: total started from None !!!
         # logger.info(f"From {url} loaded page {offset} from {total}")
-        
+
         if total is None:
             total = get_value_by_path(data, endpoint_config.total_count_path)
         if total is None:

@@ -1,13 +1,14 @@
+from src.config.config_properties import load_yaml
+from src.config.config_properties import ConfigProperties
+from src.util.json_utils import get_value_by_path
 from enum import Enum
 from dataclasses import dataclass, field
 from typing import Any
 from dataclasses import dataclass
 from typing import List
 from typing import Optional
-from config.config_properties import load_yaml
-from config.config_properties import ConfigProperties
-from util.json_utils import get_value_by_path
 import yaml
+import datetime
 
 
 _ENDPOINTS_CONFIG_PATH = "resources/endpoints.yaml"
@@ -38,6 +39,7 @@ class EndpointConfig:
     total_count_path: tuple[str, ...] = ()
 
     raw_folder: str = ""
+    raw_folder_details: str = "2"
     bronze_table: str = ""
     silver_table: str = ""
 
@@ -58,12 +60,37 @@ class EndpointConfig:
             return {}
         return { k: v for k, v in params.items() if k in self.path_params }
 
-    def build_endpoint_path(self, path_params: str) -> str:
-        return self.path.format(self.filter_path_params(path_params))
+    def build_endpoint_path(self, path_params: dict) -> str:
+        return self.path.format(**self.filter_path_params(path_params))
 
-    def build_file_name(self, offset: Optional[int] = None, 
-                        limit: Optional[int] = None, timestamp: Optional[str] = None) -> str:
-        pass
+    def build_full_file_name(self, configProperties: ConfigProperties, path_params: dict,
+                        page: Optional[int] = None, offset: Optional[int] = None, 
+                        limit: Optional[int] = None, 
+                        time_period: Optional[str] = None) -> str:
+        
+        landing_dir = self.build_landing_path(configProperties)
+        folder_details = self.raw_folder_details.format(**self.filter_path_params(path_params))
+        landing_dir = f"{landing_dir}{folder_details}"
+        time = datetime.datetime.now()
+        # TODO: Make time_period="default" for default value
+        if time_period in ("daily", "monthly"):
+            # time_dir = datetime.datetime.now().strftime(cfg.path_template.dir_time_template.monthly)
+            dir_time = time.strftime(configProperties.path_template.dir_time_template[time_period])
+        else:
+            dir_time = time.strftime(configProperties.path_template.dir_time_template["default"])
+        
+        file_name_datetime_prefix = time.strftime(configProperties.path_template.file_name.datetime_prefix)
+        if offset is None or limit is None:
+            file_name = configProperties.path_template.file_name.single_name
+        else:
+            file_name = configProperties.path_template.file_name.with_offset.format(
+                # TODO: without page ?
+                page=page,
+                offset=offset,
+                limit=limit
+                )
+        full_save_path = f"{landing_dir}{dir_time}/{file_name_datetime_prefix}{file_name}"
+        return full_save_path
 
     def build_landing_path(self, configProperties: ConfigProperties) -> str:
         return configProperties.path_template.landing_dir.format(
@@ -77,16 +104,16 @@ class EndpointConfig:
         return (
             f"/Volumes/{storage_cfg.catalog}/"
             f"{storage_cfg.bronze_schema}/"
-            f"{storage_cfg.metadata_volume}/"
-            f"{self.raw_folder}/schema/{load_type}"
+            f"{storage_cfg.autoloader_volume}/"
+            f"schema/{self.raw_folder}"
         )
 
     def build_checkpoint_location(self, storage_cfg, load_type: str) -> str:
         return (
             f"/Volumes/{storage_cfg.catalog}/"
             f"{storage_cfg.bronze_schema}/"
-            f"{storage_cfg.metadata_volume}/"
-            f"{self.raw_folder}/checkpoint/{load_type}"
+            f"{storage_cfg.autoloader_volume}/"
+            f"checkpoint/{self.raw_folder}"
         )
 
     def build_bronze_table_name(self, storage_cfg) -> str:
@@ -95,14 +122,26 @@ class EndpointConfig:
     def build_silver_table_name(self, storage_cfg) -> str:
         return f"{storage_cfg.catalog}.{storage_cfg.silver_schema}.{self.silver_table}"
     
+    # def is_valid_response(self, data) -> bool:
+    #     if data is None:
+    #         return False
+    #     if self.resource_key is not None:
+    #         return get_value_by_path(data, (self.resource_key,)) is not None
+    #     if self.validation_path is not None:
+    #         return get_value_by_path(data, self.validation_path) is not None
+    #     # TODO: add more checks? (collection_path) or just return True. Last checking?
+    #     return isinstance(data, (dict, list))
+    
     def is_valid_response(self, data) -> bool:
         if data is None:
             return False
-        if self.resource_key is not None:
-            return get_value_by_path(data, (self.resource_key,)) is not None
-        if self.validation_path is not None:
-            return get_value_by_path(data, self.validation_path) is not None
-        # TODO: add more checks? or just return True. Last checking?
+        if self.resource_key:
+            if get_value_by_path(data, (self.resource_key,)) is None:
+                return False
+        if self.validation_path:
+            if get_value_by_path(data, self.validation_path) is None:
+                return False
+         # TODO: add more checks? (collection_path) or just return True. Last checking?
         return isinstance(data, (dict, list))
     
 
@@ -122,6 +161,7 @@ def load_endpoint_configs():
             total_count_path=tuple(data.get("total_count_path", [])),
 
             raw_folder=data.get("raw_folder", ""),
+            raw_folder_details=data.get("raw_folder_details", ""),
             bronze_table=data.get("bronze_table", ""),
             silver_table=data.get("silver_table", ""),
 
@@ -131,8 +171,6 @@ def load_endpoint_configs():
             paginable=data.get("paginable", True),
             validation_path=tuple(data["validation_path"]) if data.get("validation_path") else None,
         )
-        print(key.value)
-    print(result[EndpointKeys.COUNTRIES].path)
     return result
 
 # ENDPOINT_CONFIGS: dict[EndpointKeys, EndpointConfig] = {

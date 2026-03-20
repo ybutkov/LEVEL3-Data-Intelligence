@@ -1,7 +1,8 @@
+from src.app.logger import get_logger
 from pyspark.sql import SparkSession
 from pyspark.dbutils import DBUtils
-from app.logger import get_logger
 # from functools import lru_cache
+
 
 def is_spark_session_alive(spark: SparkSession)->bool:
     try:

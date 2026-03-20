@@ -3,6 +3,7 @@ from pathlib import Path
 from copy import deepcopy
 import os
 
+
 # BASE_DIR = Path(os.getcwd())
 BASE_DIR = Path(__file__).resolve().parents[1]
 _CONFIG = None

@@ -1,5 +1,6 @@
+from src.config.config_properties import init_ConfigProperties
 import argparse
-from config.config_properties import init_ConfigProperties
+
 
 def init_app():
     parser = argparse.ArgumentParser()

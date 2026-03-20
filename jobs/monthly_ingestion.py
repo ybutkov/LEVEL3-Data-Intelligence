@@ -1,8 +1,8 @@
-from app.init_app import init_app
-from app.logger import get_logger
-from config.endpoints import EndpointKeys
-from services.ingestion_service import get_and_save_all_pages
-from services.storage_service import load_json_to_bronze_autoloader
+from src.app.init_app import init_app
+from src.app.logger import get_logger
+from src.config.endpoints import EndpointKeys
+from src.services.ingestion_service import get_and_save_all_pages
+from src.services.storage_service import load_json_to_bronze_autoloader
 
 
 def ingest_reference_entity_monthly(endpoint):
@@ -15,10 +15,10 @@ def ingest_reference_entity_monthly(endpoint):
         time_period="monthly",
     )
 
-    load_json_to_bronze_autoloader(
-        endpoint=endpoint,
-        time_period="monthly",
-    )
+    # load_json_to_bronze_autoloader(
+    #     endpoint=endpoint,
+    #     time_period="monthly",
+    # )
     logger.info(f"Finish monthly reference ingest for {endpoint.value}")
 
 

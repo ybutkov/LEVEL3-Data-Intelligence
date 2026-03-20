@@ -1,5 +1,6 @@
-from config.config_properties import get_ConfigProperties
-from app.runtime import get_dbutils
+from src.config.config_properties import get_ConfigProperties
+from src.app.runtime import get_dbutils
+
 
 def get_secret(key):
     return get_dbutils().secrets.get(get_ConfigProperties().secrets.secret_scope, key)

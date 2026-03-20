@@ -1,14 +1,17 @@
 api:
   version: v1
-  base_url: https://lh-proxy.onrender.com
+  # base_url: https://lh-proxy.onrender.com
+  base_url: https://api.lufthansa.com
+  url_oauth_token: https://api.lufthansa.com/v1/oauth/token
 
 logger:
   level: debug
   datetime_format: "%Y-%m-%dT%H:%M:%S"
 
 secrets:
-  secret_scope: lufthansa_proxy
-  password_key: password
+  secret_scope: lufthansa_level3
+  oauth_token_client_id: client_id
+  oauth_token_client_secret: client_secret
 
 storage:
   catalog: lufthansa_level

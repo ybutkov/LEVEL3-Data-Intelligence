@@ -1,8 +1,9 @@
+from src.config.config_properties import get_ConfigProperties
 import logging
 import sys
 import json
 from pathlib import Path
-from config.config_properties import get_ConfigProperties
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
@@ -81,13 +82,18 @@ def get_logger(name: str = "lufthansa_ingestion") -> logging.Logger:
 
     if logger.hasHandlers():
         return logger
-    level = configProperties.logger.level.upper()
+    if configProperties is None:
+        level = "INFO"
+        datefmt = "%Y-%m-%dT%H:%M:%S"
+    else:
+        level = configProperties.logger.level.upper()
+        datefmt = configProperties.logger.datetime_format
     logger.setLevel(level)
     handler = logging.StreamHandler(sys.stdout)
    
     handler.setLevel(level)
 
-    formatter = SpringColorFormatter(datefmt=configProperties.logger.datetime_format)
+    formatter = SpringColorFormatter(datefmt=datefmt)
     # formatter = logging.Formatter(
     #     "%(asctime)-23s | %(levelname)-8s | %(filename)-30s: %(lineno)-4d | %(message)s"
     # )

@@ -25,18 +25,18 @@ endpoints:
     airports:
         path: "/references/airports"
         resource_key: "AirportResource"
-        collection_path: ["Airports", "Airport"]
-        total_count_path: ["CityResource", "Meta", "TotalCount"]
-        raw_folder: "cities"
-        bronze_table: "cities_raw"
-        silver_table: "cities"    
+        collection_path: ["AirportResource", "Airports", "Airport"]
+        total_count_path: ["AirportResource", "Meta", "TotalCount"]
+        raw_folder: "airports"
+        bronze_table: "airports_raw"
+        silver_table: "airports"    
         query_params: ["offset", "limit", "lang"]
         paginable: True
 
     airlines:
-        path: "/references/airports"
+        path: "/references/airlines"
         resource_key: "AirlineResource"
-        collection_path: ["Airlines", "Airline"]
+        collection_path: ["AirlineResource", "Airlines", "Airline"]
         total_count_path: ["AirlineResource", "Meta", "TotalCount"]
         raw_folder: "airlines"
         bronze_table: "airlines_raw"
@@ -56,14 +56,15 @@ endpoints:
         paginable: True
 
     flightstatus_by_route:
-        path: "/operations/flightstatus/route/{departure_airport_code}/{arrival_airport_code}/{date}"
+        path: "/operations/flightstatus/route/{origin}/{destination}/{fromDateTime}"
         resource_key: "FlightStatusResource"
         collection_path: ["FlightStatusResource", "Flights", "Flight"]
         total_count_path: ["FlightStatusResource", "Meta", "TotalCount"]
         raw_folder: "flightstatus_by_route"
+        raw_folder_details: "origin={origin}/destination={destination}/"
         bronze_table: "flightstatus_by_route_raw"
         silver_table: "flightstatus_by_route"   
-        path_params: ["departure_airport_code", "arrival_airport_code", "date"] 
+        path_params: ["origin", "destination", "fromDateTime"] 
         query_params: ["offset", "limit", "lang"]
         paginable: True
 
@@ -74,5 +75,5 @@ endpoints:
         bronze_table: "flight_schedules_raw"
         silver_table: "flight_schedules"   
         query_params: ["airlines", "flightNumberRanges", "startDate", "endDate", "daysOfOperation", "timeMode"] 
-        paginable: True
+        paginable: False
         validation_path: [0, "airline"]

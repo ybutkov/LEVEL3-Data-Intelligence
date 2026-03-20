@@ -1,4 +1,5 @@
-from app.runtime import get_dbutils
+from src.app.runtime import get_dbutils
+
 
 def path_exists(path: str):
     try:

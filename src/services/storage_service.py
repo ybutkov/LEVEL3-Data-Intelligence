@@ -1,9 +1,9 @@
-from config.config_properties import get_ConfigProperties
-from config.endpoints import get_endpoint_config
-from app.runtime import get_dbutils
-from app.runtime import get_spark
-from app.logger import get_logger
-from util.path_utils import path_exists
+from src.config.config_properties import get_ConfigProperties
+from src.config.endpoints import get_endpoint_config
+from src.app.runtime import get_dbutils
+from src.app.runtime import get_spark
+from src.app.logger import get_logger
+from src.util.path_utils import path_exists
 
 from pyspark.sql import functions as F
 from pathlib import Path
@@ -105,10 +105,22 @@ def load_json_to_bronze_autoloader(endpoint, time_period: str | None = None):
     logger = get_logger(__name__)
     spark = get_spark()
 
-    source_path = get_bronze_source_path(endpoint, time_period)
-    schema_location = get_autoloader_schema_location(endpoint, time_period)
-    checkpoint_location = get_autoloader_checkpoint_location(endpoint, time_period)
-    bronze_table = get_bronze_table_name(endpoint)
+    endpoint_config = get_endpoint_config(endpoint)
+    configProperties = get_ConfigProperties()
+    source_path = endpoint_config.build_landing_path(configProperties)
+    checkpoint_location  = endpoint_config.build_checkpoint_location(configProperties.storage, time_period)
+    schema_location = endpoint_config.build_schema_location(configProperties.storage, time_period)
+    bronze_table = endpoint_config.build_bronze_table_name(configProperties.storage)
+
+    # source_path2 = get_bronze_source_path(endpoint, time_period)
+    # schema_location2 = get_autoloader_schema_location(endpoint, time_period)
+    # checkpoint_location2 = get_autoloader_checkpoint_location(endpoint, time_period)
+    # bronze_table2 = get_bronze_table_name(endpoint)
+
+    # print(source_path, source_path2, sep="\n")
+    # print(schema_location, schema_location2, sep="\n")
+    # print(checkpoint_location, checkpoint_location2, sep="\n")
+    # print(bronze_table, bronze_table2, sep="\n")
 
     logger.info(f"Starting Auto Loader endpoint: {endpoint.value} source={source_path} bronze_table={bronze_table}")
     if not path_exists(source_path):
@@ -144,15 +156,6 @@ def load_json_to_bronze_autoloader(endpoint, time_period: str | None = None):
     )
     # logger.debug("1")
     query = None
-    
-    # delete from
-    # active = spark.streams.active
-    # logger.info(f"active streams count={len(active)}")
-    # for q in active:
-    #     logger.info(f"active stream id={q.id} name={q.name} status={q.status}")
-    # logger.debug(f"table exists = {spark.catalog.tableExists(bronze_table)}")
-    # to 
-
     try:
         query = (
             df.writeStream

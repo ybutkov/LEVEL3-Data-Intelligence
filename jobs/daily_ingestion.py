@@ -1,8 +1,8 @@
-from app.init_app import init_app
-from app.logger import get_logger
-from config.endpoints import EndpointKeys
-from services.ingestion_service import get_split_and_save_request
-from services.storage_service import load_json_to_bronze_autoloader
+from src.app.init_app import init_app
+from src.app.logger import get_logger
+from src.config.endpoints import EndpointKeys
+from src.services.ingestion_service import get_split_and_save_request
+from src.services.storage_service import load_json_to_bronze_autoloader
 
 
 def ingest_operational_entity_daily(endpoint, path_params=None, query_params=None):
@@ -16,10 +16,10 @@ def ingest_operational_entity_daily(endpoint, path_params=None, query_params=Non
         time_period="daily",
     )
 
-    load_json_to_bronze_autoloader(
-        endpoint=endpoint,
-        time_period="daily",
-    )
+    # load_json_to_bronze_autoloader(
+    #     endpoint=endpoint,
+    #     time_period="daily",
+    # )
     logger.info(f"Finish daily operational ingest for {endpoint.value}")
 
 
@@ -28,16 +28,29 @@ def ingest_operational_daily():
     logger.info("Start daily operational ingestion job")
 
     # TODO: Put logic for ingesting all endpoints here
-    path_params = {
-        "departure_airport_code": "FRA",
-        "arrival_airport_code": "JFK",
-        "date": "2026-03-18",
-    }
+    for _ in range(5):
+        path_params = {
+            "origin": "FRA",
+            "destination": "ZRH",
+            "fromDateTime": "2026-03-20",
+        }
     
-    ingest_operational_entity_daily(
-        endpoint=EndpointKeys.FLIGHTSTATUS_BY_ROUTE,
-        path_params=path_params,
-        query_params={},
-    )
+        ingest_operational_entity_daily(
+            endpoint=EndpointKeys.FLIGHTSTATUS_BY_ROUTE,
+            path_params=path_params,
+            query_params={},
+        )
+
+        query_params = {
+            "airlines": "LH",
+            "startDate": "10MAR26",
+            "endDate": "15MAR26",
+            "daysOfOperation": "1234567",
+            "timeMode": "UTC"
+        }
+        ingest_operational_entity_daily(
+            EndpointKeys.FLIGHT_SCHEDULES, 
+            query_params=query_params
+        )
 
     logger.info("Finish daily operational ingestion job")
