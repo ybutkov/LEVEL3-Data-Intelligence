@@ -68,7 +68,6 @@ endpoints:
         query_params: ["offset", "limit", "lang"]
         paginable: True
 
-    # https://lh-proxy.onrender.com/v1/flight-schedules/flightschedules/passenger?airlines=LH&startDate=10MAR26&endDate=15MAR26&daysOfOperation=1234567&timeMode=UTC
     flight_schedules:
         path: "/flight-schedules/flightschedules/passenger"
         raw_folder: "flight_schedules"
