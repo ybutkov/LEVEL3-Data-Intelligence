@@ -1,0 +1,27 @@
+resources:
+  pipelines:
+    ingestion_pipeline_autoload:
+      name: ingestion_pipeline_autoload
+      catalog: lufthansa_level
+      schema: bronze
+      serverless: true
+      continuous: false
+      schema: bronze
+      libraries:
+        - file:
+            path: ${workspace.file_path}/src/1_bronze/references_pipeline.py
+            
+      configuration:
+        root_path: ${workspace.file_path}
+        catalog: lufthansa_level
+        schema: bronze
+        landing_area: landing_area
+        meta_volume: autoloader_metadata
+      #   schema: bronze
+
+
+      # development: false
+      # photon: true
+      # channel: CURRENT
+      # root_path: /Workspace/Users/herr.butkov@gmail.com/reference_pipeline_autoload
+

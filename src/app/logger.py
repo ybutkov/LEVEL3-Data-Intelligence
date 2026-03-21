@@ -1,4 +1,5 @@
-from src.config.config_properties import get_ConfigProperties
+from src.config.config_properties import get_ConfigProperties, init_ConfigProperties
+import os
 import logging
 import sys
 import json
@@ -78,16 +79,27 @@ class JSONFormatter(logging.Formatter):
 
 def get_logger(name: str = "lufthansa_ingestion") -> logging.Logger:
     logger = logging.getLogger(name)
+    # Ensure configuration is initialized (reads application.yaml + application-<profile>.yaml)
     configProperties = get_ConfigProperties()
+    if configProperties is None:
+        profile = os.getenv("APP_PROFILE", "dev")
+        init_ConfigProperties(profile)
+        configProperties = get_ConfigProperties()
 
     if logger.hasHandlers():
         return logger
-    if configProperties is None:
+
+    # Default values
+    level = "INFO"
+    datefmt = "%Y-%m-%dT%H:%M:%S"
+    try:
+        if configProperties and getattr(configProperties, "logger", None):
+            level = configProperties.logger.level.upper()
+            datefmt = configProperties.logger.datetime_format
+    except Exception:
+        # fallback to defaults
         level = "INFO"
         datefmt = "%Y-%m-%dT%H:%M:%S"
-    else:
-        level = configProperties.logger.level.upper()
-        datefmt = configProperties.logger.datetime_format
     logger.setLevel(level)
     handler = logging.StreamHandler(sys.stdout)
    
@@ -102,6 +114,6 @@ def get_logger(name: str = "lufthansa_ingestion") -> logging.Logger:
 
     logger.addHandler(handler)
     logger.propagate = False
-    logger.info(f"Logger configured with level {level}")
+    # logger.info(f"Logger configured with level {level}")
     return logger
     

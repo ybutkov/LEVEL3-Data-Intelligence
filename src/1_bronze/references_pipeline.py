@@ -1,3 +1,9 @@
+import sys
+
+root_path = spark.conf.get("root_path")
+if root_path:
+    sys.path.insert(0, root_path)
+
 from src.config.endpoints import EndpointKeys
 from src.config.endpoints import get_endpoint_config
 from src.config.endpoints import EndpointConfig
@@ -7,10 +13,10 @@ from src.config.config_properties import get_ConfigProperties
 from pyspark import pipelines as dp
 from pyspark.sql import functions as F
 
-CATALOG = "lufthansa_level"
-SCHEMA = "bronze"
-LANDING_VOLUME = "landing_area"
-META_VOLUME = "autoloader_metadata"
+CATALOG = spark.conf.get("catalog")
+SCHEMA = spark.conf.get("schema")
+LANDING_VOLUME = spark.conf.get("landing_area")
+META_VOLUME =  spark.conf.get("meta_volume")
 
 
 # configProperties = get_ConfigProperties()

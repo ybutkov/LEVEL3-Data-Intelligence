@@ -67,9 +67,8 @@ def fetch_data(url, query_params=None, max_retries=5, timeout=20):
                 params=query_params,
                 timeout=timeout,
             )
-            
+            logger.fatal(f"response={response.status_code}")
             status_code = response.status_code
-            
             if status_code in RETRYABLE_STATUS_CODES:
                 last_error = RuntimeError(f"Retryable status code {status_code}")
                 if attempt == max_retries:
@@ -94,6 +93,7 @@ def fetch_data(url, query_params=None, max_retries=5, timeout=20):
             return response
 
         except (requests.Timeout, requests.ConnectionError) as e:
+            logger.fatal("{e}")
             last_error = RuntimeError(f"Connection error: {type(e).__name__}")
             if attempt == max_retries:
                 logger.error(f"Connection failed after {max_retries} attempts: {e}")
@@ -107,12 +107,13 @@ def fetch_data(url, query_params=None, max_retries=5, timeout=20):
             time.sleep(sleep_seconds)
             delay *= 2.0
         
-        except ValueError:
-            raise
+        except ValueError as e:
+            logger.fatal(f"ValueError={e}")
+            raise e
         
         except requests.HTTPError as e:
             status_code = e.response.status_code if e.response is not None else None
-
+            logger.fatal(f"status_code={status_code}")
             if status_code in RETRYABLE_STATUS_CODES:
                 last_error = RuntimeError(f"Retryable HTTP error {status_code}")
                 if attempt == max_retries:
@@ -129,7 +130,7 @@ def fetch_data(url, query_params=None, max_retries=5, timeout=20):
             else:
                 logger.error(f"Non-retryable HTTP error {status_code}")
                 # Re-raise the original HTTPError so callers can inspect status_code
-                raise
+                raise e
 
 
 def get_split_and_save_request(
@@ -161,11 +162,13 @@ def get_split_and_save_request(
             url=url,
             query_params=page_query_params,
         )
+        logger.critical(f"After fetch, status_code={response.status_code}")
         data = _parse_json_response(response)
         _validate_response_shape(endpoint_config, data)
+        logger.critical("2")
         if not endpoint_config.is_valid_response(data):
             raise ValueError("Fetching Error: response structure is not valid!!")
-        
+        logger.critical("3")
         full_save_path = endpoint_config.build_full_file_name(
             configProperties=configProperties,
             path_params=path_params,
@@ -186,11 +189,28 @@ def get_split_and_save_request(
         # TODO: Check before paginable or not and type of error
         logger.exception(f"Request failed endpoint={endpoint.value} offset={offset} limit={limit} error: {e}")
 
-        # If this is a non-retryable HTTP error, re-raise so caller can handle it
+        # If this is an HTTP error, decide whether it's fatal (auth) or per-offset
         if isinstance(e, requests.HTTPError):
             status = e.response.status_code if getattr(e, "response", None) is not None else None
-            if status in NON_RETRYABLE_STATUS_CODES:
-                raise
+            # Treat auth errors as fatal for the whole run
+            if status in {HTTPStatus.UNAUTHORIZED, HTTPStatus.FORBIDDEN}:
+                raise e
+
+            # If endpoint explicitly requests to stop on 404, honor it
+            if status == HTTPStatus.NOT_FOUND and getattr(endpoint_config, "stop_on_404", False):
+                logger.error(f"Endpoint configured to stop on 404: {endpoint.value}")
+                raise e
+
+            # For other resource-level errors (400/404 when not flagged), treat as per-offset failure
+            logger.warning(
+                f"HTTP error {status} for endpoint={endpoint.value} offset={offset}; "
+                "marking offset or splitting range"
+            )
+            if not limit or limit <= 1:
+                if offset is not None:
+                    failed_offsets.append(offset)
+                return data, failed_offsets
+            # otherwise fall through to split-and-retry logic below
 
         if isinstance(e, ValueError):
             logger.warning(f"Parsing/validation error for endpoint={endpoint.value} offset={offset}: {e}")
@@ -231,7 +251,7 @@ def get_and_save_all_pages(
         limit=20,
         time_period=None):
 
-    logger.info(f"Start retrieving data. Endpoint: {endpoint.value}")
+    # logger.info(f"Start retrieving data. Endpoint: {endpoint.value}")
     
     if query_params:
         query_params = query_params.copy() 
@@ -280,4 +300,4 @@ def get_and_save_all_pages(
                 )
             break
     
-    logger.info(f"Finish retrieving data. Endpoint: {endpoint.value}")
+    # logger.info(f"Finish retrieving data. Endpoint: {endpoint.value}")
