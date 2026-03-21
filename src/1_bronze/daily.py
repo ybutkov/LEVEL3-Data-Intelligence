@@ -5,6 +5,7 @@ parser.add_argument("--root_path", default="")
 args,_ = parser.parse_known_args()
 if args.root_path:
     sys.path.insert(0, args.root_path)
+# sys.path.append("..")
 
 from src.app.init_app import init_app
 from src.app.logger import get_logger
