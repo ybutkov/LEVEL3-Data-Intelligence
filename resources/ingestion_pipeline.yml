@@ -6,7 +6,6 @@ resources:
       schema: bronze
       serverless: true
       continuous: false
-      schema: bronze
       libraries:
         - file:
             path: ${workspace.file_path}/src/1_bronze/references_pipeline.py

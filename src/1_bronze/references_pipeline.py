@@ -1,7 +1,7 @@
 import sys
 
 root_path = spark.conf.get("root_path")
-if root_path:
+if root_path and root_path not in sys.path:
     sys.path.insert(0, root_path)
 
 from src.config.endpoints import EndpointKeys
