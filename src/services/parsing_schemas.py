@@ -116,6 +116,7 @@ airline_resource_schema = StructType([
 aircraft_schema = StructType([
     StructField("AircraftCode", StringType(), True),
     StructField("Names", single_name_schema, True),
+    StructField("AirlineEquipCode", StringType(), True),
 ])
 
 aircraft_summary_schema = StructType([
