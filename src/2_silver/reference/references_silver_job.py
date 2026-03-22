@@ -14,7 +14,7 @@ from src.services.parser.references.countries import run_countries
 from src.services.parser.references.cities import run_cities
 from src.services.parser.references.airports import run_airports
 from src.services.parser.references.airlines import run_airlines
-
+from src.services.parser.references.aircraft import run_aircraft
 
 def main():
     init_app()
