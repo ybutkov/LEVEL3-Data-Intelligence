@@ -1,0 +1,72 @@
+from src.app.logger import get_logger
+from src.services.parser.utils.parser_utils import (
+    build_parsed_df,
+    split_valid_invalid,
+    log_invalid_records,
+    add_silver_metadata,
+    build_table_name,
+)
+
+logger = get_logger(__name__)
+
+
+def run_reference_parser(
+    spark,
+    cfg,
+    endpoint_key,
+    schema,
+    build_outputs_fn,
+):
+    from src.config.endpoints import get_endpoint_config
+
+    endpoint_cfg = get_endpoint_config(endpoint_key)
+    dataset_name = endpoint_cfg.bronze_table
+    bronze_table = endpoint_cfg.build_bronze_table_name(cfg.storage)
+
+    invalid_log_table = build_table_name(
+        cfg, cfg.storage.silver_schema, "audit_invalid_json_log"
+    )
+
+    logger.info(f"START parser: {dataset_name}")
+    logger.info(f"Bronze source table: {bronze_table}")
+
+    try:
+        parsed_df = build_parsed_df(
+            spark=spark,
+            bronze_table=bronze_table,
+            schema=schema,
+            raw_json_col="raw_json",
+        )
+
+        valid_df, invalid_df = split_valid_invalid(parsed_df)
+
+        logger.info("Log invalid JSON rows")
+        log_invalid_records(
+            invalid_df=invalid_df,
+            log_table=invalid_log_table,
+            raw_json_col="raw_json",
+            dataset_name=dataset_name,
+        )
+
+        logger.info(f"Build entity outputs for dataset: {dataset_name}")
+        outputs = build_outputs_fn(valid_df)
+        if not outputs:
+            logger.warning(f"Not outputs for dataset: {dataset_name}")
+
+
+        for table_name, df in outputs.items():
+            full_table_name = build_table_name(
+                cfg, cfg.storage.silver_schema, table_name
+            )
+
+            logger.info(f"Add silver metadata: {table_name}")
+            df = add_silver_metadata(df)
+
+            logger.info(f"Write table: {full_table_name}")
+            df.write.mode("overwrite").saveAsTable(full_table_name)
+
+        logger.info(f"FINISH parser: {dataset_name}")
+
+    except Exception as e:
+        logger.exception(f"FAILED parser: {dataset_name}, error={e}")
+        raise

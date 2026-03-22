@@ -10,13 +10,15 @@ if args.root_path and args.root_path not in sys.path:
 
 from src.app.init_app import init_app
 from src.config.config_properties import get_ConfigProperties
-from src.services.parser.references.countries import parse_countries
+from src.services.parser.references.countries import run_countries
+from src.services.parser.references.cities import run_cities
 
 
 def main():
     init_app()
     cfg = get_ConfigProperties()
-    parse_countries(spark, cfg)
+    run_countries(spark, cfg)
+    run_cities(spark, cfg)
 
 
 if __name__ == "__main__":
