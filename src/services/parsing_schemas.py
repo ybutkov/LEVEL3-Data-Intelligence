@@ -113,22 +113,6 @@ airline_resource_schema = StructType([
 ])
 
 
-# aircraft_summary_schema = StructType([
-#     StructField("AircraftCode", StringType(), True),
-#     StructField("Names", StructType([
-#         StructField("Name", name_schema, True)
-#     ]), True),
-#     StructField("AirlineEquipCode", StringType(), True),
-# ])
-# aircraft_resource_schema = StructType([
-#     StructField("AircraftResource", StructType([
-#         StructField("AircraftSummaries", StructType([
-#             StructField("AircraftSummary", ArrayType(aircraft_summary_schema), True)
-#         ]), True),
-#         StructField("Meta", meta_schema, True),
-#     ]), True),
-# ])
-
 aircraft_schema = StructType([
     StructField("AircraftCode", StringType(), True),
     StructField("Names", single_name_schema, True),
@@ -151,3 +135,58 @@ aircraft_resource_schema = StructType([
     )
 ])
 
+# datetime_block_schema = StructType([
+#     StructField("DateTime", StringType(), True),
+# ])
+
+# time_status_schema = StructType([
+#     StructField("Code", StringType(), True),
+#     StructField("Definition", StringType(), True),
+# ])
+
+# terminal_schema = StructType([
+#     StructField("Name", StringType(), True),
+#     StructField("Gate", StringType(), True),
+# ])
+
+# carrier_schema = StructType([
+#     StructField("AirlineID", StringType(), True),
+#     StructField("FlightNumber", StringType(), True),
+# ])
+
+# equipment_schema = StructType([
+#     StructField("AircraftCode", StringType(), True),
+# ])
+
+# departure_arrival_schema = StructType([
+#     StructField("AirportCode", StringType(), True),
+#     StructField("ScheduledTimeLocal", datetime_block_schema, True),
+#     StructField("ScheduledTimeUTC", datetime_block_schema, True),
+#     StructField("EstimatedTimeLocal", datetime_block_schema, True),
+#     StructField("EstimatedTimeUTC", datetime_block_schema, True),
+#     StructField("ActualTimeLocal", datetime_block_schema, True),
+#     StructField("ActualTimeUTC", datetime_block_schema, True),
+#     StructField("TimeStatus", time_status_schema, True),
+#     StructField("Terminal", terminal_schema, True),
+# ])
+
+# flight_status_schema = StructType([
+#     StructField("Departure", departure_arrival_schema, True),
+#     StructField("Arrival", departure_arrival_schema, True),
+#     StructField("MarketingCarrier", carrier_schema, True),
+#     StructField("OperatingCarrier", carrier_schema, True),
+#     StructField("Equipment", equipment_schema, True),
+#     StructField("FlightStatus", time_status_schema, True),
+# ])
+
+# flight_status_resource_schema = StructType([
+#     StructField("Flights", StructType([
+#         StructField("Flight", ArrayType(flight_status_schema), True)
+#     ]), True),
+#     StructField("Meta", meta_schema, True),
+# ])
+
+# flight_status_single_schema = flight_status_resource_schema
+# flight_status_by_route_schema = flight_status_resource_schema
+# flight_status_departure_airport_schema = flight_status_resource_schema
+# flight_status_arrival_airport_schema = flight_status_resource_schema

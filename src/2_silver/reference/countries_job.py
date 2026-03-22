@@ -23,6 +23,7 @@ def main():
     run_cities(spark, cfg)
     run_airports(spark, cfg)
     run_airlines(spark, cfg)
+    run_aircraft(spark, cfg)
 
 
 if __name__ == "__main__":
