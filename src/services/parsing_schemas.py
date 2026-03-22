@@ -54,3 +54,30 @@ city_resource_schema = StructType([
         StructField("Meta", meta_schema, True),
     ]), True),
 ])
+
+airport_schema = StructType([
+    StructField("AirportCode", StringType(), True),
+    StructField("Position", StructType([
+        StructField("Coordinate", StructType([
+            StructField("Latitude", StringType(), True),
+            StructField("Longitude", StringType(), True),
+        ]), True)
+    ]), True),
+    StructField("CityCode", StringType(), True),
+    StructField("CountryCode", StringType(), True),
+    StructField("LocationType", StringType(), True),
+    StructField("Names", StructType([
+        StructField("Name", ArrayType(name_schema), True)
+    ]), True),
+    StructField("UtcOffset", StringType(), True),
+    StructField("TimeZoneId", StringType(), True),
+])
+
+airport_resource_schema = StructType([
+    StructField("AirportResource", StructType([
+        StructField("Airports", StructType([
+            StructField("Airport", ArrayType(airport_schema), True)
+        ]), True),
+        StructField("Meta", meta_schema, True),
+    ]), True),
+])
