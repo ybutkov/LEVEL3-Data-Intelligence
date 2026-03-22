@@ -13,6 +13,7 @@ from src.config.config_properties import get_ConfigProperties
 from src.services.parser.references.countries import run_countries
 from src.services.parser.references.cities import run_cities
 from src.services.parser.references.airports import run_airports
+from src.services.parser.references.airlines import run_airlines
 
 
 def main():
@@ -21,6 +22,7 @@ def main():
     run_countries(spark, cfg)
     run_cities(spark, cfg)
     run_airports(spark, cfg)
+    run_airlines(spark, cfg)
 
 
 if __name__ == "__main__":

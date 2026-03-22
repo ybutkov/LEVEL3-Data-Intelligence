@@ -81,3 +81,50 @@ airport_resource_schema = StructType([
         StructField("Meta", meta_schema, True),
     ]), True),
 ])
+
+airline_names_schema = StructType([
+    StructField(
+        "Name", name_schema, True)
+])
+
+airline_schema = StructType([
+    StructField("AirlineID", StringType(), True),
+    StructField("AirlineID_ICAO", StringType(), True),
+    StructField("Names", airline_names_schema, True),
+])
+
+
+airlines_schema = StructType([
+    StructField("Airline",
+        ArrayType(airline_schema),
+        True
+    )
+])
+
+
+airline_resource_schema = StructType([
+    StructField(
+        "AirlineResource", StructType([
+            StructField("Airlines", airlines_schema, True),
+            StructField("Meta", meta_schema, True),
+        ]),
+        True
+    )
+])
+
+
+aircraft_summary_schema = StructType([
+    StructField("AircraftCode", StringType(), True),
+    StructField("Names", StructType([
+        StructField("Name", ArrayType(name_schema), True)
+    ]), True),
+    StructField("AirlineEquipCode", StringType(), True),
+])
+
+aircraft_resource_schema = StructType([
+    StructField("AircraftSummaries", StructType([
+        StructField("AircraftSummary", ArrayType(aircraft_summary_schema), True)
+    ]), True),
+    StructField("Meta", meta_schema, True),
+])
+
