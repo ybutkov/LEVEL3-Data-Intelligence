@@ -7,6 +7,7 @@ from src.services.parser.utils.parser_utils import (
     build_table_name,
     split_valid_invalid,
     log_invalid_records,
+    add_silver_metadata,
     )
 from src.config.endpoints import get_endpoint_config, EndpointKeys
 import src.services.parsing_schemas as schemas
@@ -18,12 +19,20 @@ def transform_countries(parsed_df: DataFrame) -> DataFrame:
     logger.info("Start transform_countries")
     result_df = (
         parsed_df
-        .select(explode(col("data_json.CountryResource.Countries.Country")).alias("country"))
         .select(
+            "source_file",
+            "bronze_ingested_at",
+            explode(col("data_json.CountryResource.Countries.Country")).alias("country")
+            )
+        .select(
+            col("source_file"),
+            col("bronze_ingested_at"),
             col("country.CountryCode").alias("country_code"),
             explode(col("country.Names.Name")).alias("name")
         )
         .select(
+            col("source_file"),
+            col("bronze_ingested_at"),
             col("country_code"),
             col("name.@LanguageCode").alias("language_code"),
             col("name.$").alias("country_name")
@@ -41,6 +50,8 @@ def build_ref_dim_country(country_names_flat_df: DataFrame) -> DataFrame:
         country_names_flat_df
         .filter(col("language_code") == "EN")
         .select(
+            col("source_file"),
+            col("bronze_ingested_at"),
             col("country_code"),
             col("country_name").alias("country_name_en")
         )
@@ -72,8 +83,8 @@ def parse_countries(spark,cfg) -> None:
             schema=schemas.country_resource_schema,
             raw_json_col="raw_json",
         )
-        parsed_count = parsed_df.count()
-        logger.info(f"Parsed dataframe rows: {parsed_count}")
+        # parsed_count = parsed_df.count()
+        # logger.info(f"Parsed dataframe rows: {parsed_count}")
 
         valid_df, invalid_df = split_valid_invalid(parsed_df)
         # valid_df = valid_df.persist()
@@ -86,7 +97,10 @@ def parse_countries(spark,cfg) -> None:
         )
 
         country_names_flat_df = transform_countries(valid_df).dropDuplicates(["country_code", "language_code"])
+        country_names_flat_df = add_silver_metadata(country_names_flat_df)
+
         ref_dim_country_df = build_ref_dim_country(country_names_flat_df)
+        ref_dim_country_df = add_silver_metadata(ref_dim_country_df)
 
         logger.info(f"Writing table: {silver_country_names_table}")
         country_names_flat_df.write.mode("overwrite").saveAsTable(silver_country_names_table)
