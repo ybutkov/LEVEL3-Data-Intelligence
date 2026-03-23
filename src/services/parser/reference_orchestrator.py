@@ -6,6 +6,7 @@ from src.services.parser.utils.parser_utils import (
     add_silver_metadata,
     build_table_name,
 )
+from src.config.endpoints import get_endpoint_config
 
 logger = get_logger(__name__)
 
@@ -16,8 +17,7 @@ def run_reference_parser(
     endpoint_key,
     schema,
     build_outputs_fn,
-):
-    from src.config.endpoints import get_endpoint_config
+): 
 
     endpoint_cfg = get_endpoint_config(endpoint_key)
     dataset_name = endpoint_cfg.bronze_table
@@ -59,8 +59,9 @@ def run_reference_parser(
                 cfg, cfg.storage.silver_schema, table_name
             )
 
-            logger.info(f"Add silver metadata: {table_name}")
-            df = add_silver_metadata(df)
+            if not table_name.startswith("audit_"):
+                logger.info(f"Add silver metadata: {table_name}")
+                df = add_silver_metadata(df)
 
             logger.info(f"Write table: {full_table_name}")
             df.write.mode("overwrite").saveAsTable(full_table_name)
