@@ -1,6 +1,7 @@
 from pyspark.sql.functions import col, explode
 
 from src.services.parser.reference_orchestrator import run_reference_parser
+# from src.services.parser.utils.normalization import normalize_string_columns
 from src.config.endpoints import EndpointKeys
 import src.services.parsing_schemas as schemas
 from src.app.logger import get_logger
@@ -89,12 +90,19 @@ def build_ref_city_airport_map(valid_df):
 def build_city_outputs(valid_df):
     city_names_flat_df = (
         transform_city_names(valid_df)
+        # .transform(lambda df: normalize_string_columns(df, ["city_code", "language_code"]))
         .dropDuplicates(["city_code", "language_code"])
     )
 
     ref_dim_city_df = build_ref_dim_city(valid_df)
+    # ref_dim_city_df = build_ref_dim_city(valid_df).transform(
+    #     lambda df: normalize_string_columns(df, ["city_code", "language_code"])
+    # )
 
     ref_city_airport_map_df = build_ref_city_airport_map(valid_df)
+    # ref_city_airport_map_df = build_ref_city_airport_map(valid_df).transform(
+    #     lambda df: normalize_string_columns(df, ["city_code", "language_code"])
+    # )
 
     return {
         "ref_city_names_flat": city_names_flat_df,

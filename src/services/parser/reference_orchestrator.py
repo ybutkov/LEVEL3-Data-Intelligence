@@ -7,6 +7,12 @@ from src.services.parser.utils.parser_utils import (
     build_table_name,
 )
 from src.config.endpoints import get_endpoint_config
+from src.services.parser.utils.validation_utils import validate_outputs
+from src.services.parser.utils.normalize_utils import normalize_outputs
+from src.services.parser.references.reference_rules import REFERENCE_RULES
+from src.services.parser.utils.normalize_utils import REFERENCE_NORMALIZATION_MAP
+from src.services.parser.utils.cast_utils import cast_outputs
+from src.services.parser.references.reference_casting import REFERENCE_CASTING_MAP
 
 logger = get_logger(__name__)
 
@@ -17,7 +23,8 @@ def run_reference_parser(
     endpoint_key,
     schema,
     build_outputs_fn,
-): 
+):
+    from src.config.endpoints import get_endpoint_config
 
     endpoint_cfg = get_endpoint_config(endpoint_key)
     dataset_name = endpoint_cfg.bronze_table
@@ -25,6 +32,9 @@ def run_reference_parser(
 
     invalid_log_table = build_table_name(
         cfg, cfg.storage.silver_schema, "audit_invalid_json_log"
+    )
+    quarantine_table = build_table_name(
+        cfg, cfg.storage.silver_schema, "audit_quarantine_records"
     )
 
     logger.info(f"START parser: {dataset_name}")
@@ -48,13 +58,30 @@ def run_reference_parser(
             dataset_name=dataset_name,
         )
 
-        logger.info(f"Build entity outputs for dataset: {dataset_name}")
+        logger.info("Build entity outputs")
         outputs = build_outputs_fn(valid_df)
         if not outputs:
             logger.warning(f"Not outputs for dataset: {dataset_name}")
 
+        logger.info("Normalize outputs")
+        outputs = normalize_outputs(
+            outputs=outputs,
+            normalization_map=REFERENCE_NORMALIZATION_MAP,
+        )
+        outputs = cast_outputs(
+            outputs=outputs,
+            casting_map=REFERENCE_CASTING_MAP,
+        )
 
-        for table_name, df in outputs.items():
+        logger.info("Validate outputs")
+        table_rules = REFERENCE_RULES.get(dataset_name, {})
+        validated_outputs, quarantine_df = validate_outputs(
+            outputs=outputs,
+            dataset_name=dataset_name,
+            table_rules=table_rules,
+        )
+
+        for table_name, df in validated_outputs.items():
             full_table_name = build_table_name(
                 cfg, cfg.storage.silver_schema, table_name
             )
@@ -65,6 +92,10 @@ def run_reference_parser(
 
             logger.info(f"Write table: {full_table_name}")
             df.write.mode("overwrite").saveAsTable(full_table_name)
+
+        if quarantine_df is not None:
+            logger.info(f"Write quarantine table: {quarantine_table}")
+            quarantine_df.write.mode("append").saveAsTable(quarantine_table)
 
         logger.info(f"FINISH parser: {dataset_name}")
 

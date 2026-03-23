@@ -32,7 +32,7 @@ def build_quarantine_df(
 ):
     payload_cols = [
         col for col in df.columns
-        if col not in ["source_file", "bronze_ingested_at"]
+        if col not in ["source_file", "bronze_ingested_at", "processed_at"]
         ]
     return (
         df
@@ -51,3 +51,35 @@ def build_quarantine_df(
             "quarantined_at",
         )
     )
+
+def validate_outputs(outputs: dict, dataset_name: str, table_rules: dict):
+    valid_outputs = {}
+    quarantine_dfs = []
+
+    for table_name, df in outputs.items():
+        rules = table_rules.get(table_name)
+
+        if not rules:
+            valid_outputs[table_name] = df
+            continue
+
+        valid_df, invalid_df = split_by_rules(df, rules)
+        valid_outputs[table_name] = valid_df
+
+        if invalid_df.take(1):
+            quarantine_dfs.append(
+                build_quarantine_df(
+                    invalid_df,
+                    dataset_name=dataset_name,
+                    target_table=table_name,
+                    rule_name=f"{table_name}_rules",
+                )
+            )
+
+    quarantine_df = None
+    if quarantine_dfs:
+        quarantine_df = quarantine_dfs[0]
+        for qdf in quarantine_dfs[1:]:
+            quarantine_df = quarantine_df.unionByName(qdf)
+
+    return valid_outputs, quarantine_df

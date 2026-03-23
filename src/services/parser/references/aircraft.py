@@ -1,6 +1,7 @@
 from pyspark.sql.functions import col, explode
 
 from src.services.parser.reference_orchestrator import run_reference_parser
+# from src.services.parser.utils.normalization import normalize_string_columns
 from src.config.endpoints import EndpointKeys
 import src.services.parsing_schemas as schemas
 from src.app.logger import get_logger
@@ -60,15 +61,19 @@ def build_ref_dim_aircraft(valid_df):
 
 
 def build_aircraft_outputs(valid_df):
-    aircraft_names_flat_df = (
+    ref_aircraft_names_flat_df = (
         transform_aircraft_names(valid_df)
-        .dropDuplicates(["aircraft_code", "language_code"])
+            # .transform(lambda df: normalize_string_columns(df, ["aircraft_code", "language_code"]))
+            .dropDuplicates(["aircraft_code", "language_code"])
     )
 
     ref_dim_aircraft_df = build_ref_dim_aircraft(valid_df)
+    # ref_dim_aircraft_df = build_ref_dim_aircraft(valid_df).transform(
+    #     lambda df: normalize_string_columns(df, ["aircraft_code", "airline_equip_code"])
+    # )
 
     return {
-        "ref_aircraft_names_flat": aircraft_names_flat_df,
+        "ref_aircraft_names_flat": ref_aircraft_names_flat_df,
         "ref_dim_aircraft": ref_dim_aircraft_df,
     }
 

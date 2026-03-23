@@ -9,6 +9,7 @@ from src.config.endpoints import get_endpoint_config
 from src.config.endpoints import EndpointConfig
 from src.config.config_properties import ConfigProperties
 from src.config.config_properties import get_ConfigProperties
+from src.app.logger import get_logger
 
 from pyspark import pipelines as dp
 from pyspark.sql import functions as F
