@@ -1,7 +1,11 @@
 from pyspark.sql.functions import col, explode
 
 from src.services.parser.reference_orchestrator import run_reference_parser
-# from src.services.parser.utils.normalization import normalize_string_columns
+from src.services.parser.utils.reference_builders import (
+    explode_entity,
+    build_array_names_flat_df,
+    build_simple_dim_df,
+)
 from src.config.endpoints import EndpointKeys
 import src.services.parsing_schemas as schemas
 from src.app.logger import get_logger
@@ -10,70 +14,10 @@ from src.app.logger import get_logger
 logger = get_logger(__name__)
 
 
-def transform_city_names(valid_df):
-    logger.info("Start transform_city_names")
+def build_ref_city_airport_map(exploded_df):
 
     result_df = (
-        valid_df
-        .select(
-            "source_file",
-            "bronze_ingested_at",
-            explode(col("data_json.CityResource.Cities.City")).alias("city")
-        )
-        .select(
-            col("source_file"),
-            col("bronze_ingested_at"),
-            col("city.CityCode").alias("city_code"),
-            explode(col("city.Names.Name")).alias("name")
-        )
-        .select(
-            col("source_file"),
-            col("bronze_ingested_at"),
-            col("city_code"),
-            col("name.@LanguageCode").alias("language_code"),
-            col("name.$").alias("city_name")
-        )
-    )
-
-    logger.info("Finish transform_city_names")
-    return result_df
-
-
-def build_ref_dim_city(valid_df):
-    logger.info("Start build_ref_dim_city")
-
-    result_df = (
-        valid_df
-        .select(
-            "source_file",
-            "bronze_ingested_at",
-            explode(col("data_json.CityResource.Cities.City")).alias("city")
-        )
-        .select(
-            col("source_file"),
-            col("bronze_ingested_at"),
-            col("city.CityCode").alias("city_code"),
-            col("city.CountryCode").alias("country_code"),
-            col("city.UtcOffset").alias("utc_offset"),
-            col("city.TimeZoneId").alias("time_zone_id"),
-        )
-        .dropDuplicates(["city_code"])
-    )
-
-    logger.info("Finish build_ref_dim_city")
-    return result_df
-
-
-def build_ref_city_airport_map(valid_df):
-    logger.info("Start build_ref_city_airport_map")
-
-    result_df = (
-        valid_df
-        .select(
-            "source_file",
-            "bronze_ingested_at",
-            explode(col("data_json.CityResource.Cities.City")).alias("city")
-        )
+        exploded_df
         .select(
             col("source_file"),
             col("bronze_ingested_at"),
@@ -83,29 +27,50 @@ def build_ref_city_airport_map(valid_df):
         .dropDuplicates(["city_code", "airport_code"])
     )
 
-    logger.info("Finish build_ref_city_airport_map")
     return result_df
 
 
 def build_city_outputs(valid_df):
-    city_names_flat_df = (
-        transform_city_names(valid_df)
-        # .transform(lambda df: normalize_string_columns(df, ["city_code", "language_code"]))
+    logger.info("Start build_city_outputs")
+
+    exploded_df = explode_entity(
+        valid_df=valid_df,
+        entity_path="data_json.CityResource.Cities.City",
+        entity_alias="city"
+    )
+
+    logger.info("Start build_array_names_flat")
+    ref_city_names_flat_df = (
+        build_array_names_flat_df(
+            exploded_df=exploded_df,
+            entity_alias="city",
+            code_field="CityCode",
+            code_alias="city_code",
+            name_alias="city_name",
+        )
         .dropDuplicates(["city_code", "language_code"])
     )
 
-    ref_dim_city_df = build_ref_dim_city(valid_df)
-    # ref_dim_city_df = build_ref_dim_city(valid_df).transform(
-    #     lambda df: normalize_string_columns(df, ["city_code", "language_code"])
-    # )
+    logger.info("Start build_simple_dim")
+    ref_dim_city_df = build_simple_dim_df(
+        exploded_df=exploded_df,
+        entity_alias="city",
+        key_field="CityCode",
+        key_alias="city_code",
+        extra_fields={
+            "CountryCode": "country_code",
+            "UtcOffset": "utc_offset",
+            "TimeZoneId": "time_zone_id",
+        },
+    )
 
-    ref_city_airport_map_df = build_ref_city_airport_map(valid_df)
-    # ref_city_airport_map_df = build_ref_city_airport_map(valid_df).transform(
-    #     lambda df: normalize_string_columns(df, ["city_code", "language_code"])
-    # )
+    logger.info("Start build_ref_city_airport_map")
+    ref_city_airport_map_df = build_ref_city_airport_map(exploded_df)
+
+    logger.info("Finish build_city_outputs")
 
     return {
-        "ref_city_names_flat": city_names_flat_df,
+        "ref_city_names_flat": ref_city_names_flat_df,
         "ref_dim_city": ref_dim_city_df,
         "ref_city_airport_map": ref_city_airport_map_df,
     }

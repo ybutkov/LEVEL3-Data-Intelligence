@@ -24,7 +24,7 @@ def normalize_code_columns(df: DataFrame, columns: list[str]) -> DataFrame:
 
     for column in columns:
         if column in result_df.columns:
-            result_df = result_df.withColumn(column, upper(trim(col(column))))
+            result_df = result_df.withColumn(column, upper(trim(col(column)))) # Change to lower for test
     return result_df
 
 def normalize_outputs(outputs: dict[str, DataFrame], normalization_map: dict[str, list[str]]):

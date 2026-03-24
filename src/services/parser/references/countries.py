@@ -1,83 +1,52 @@
-from pyspark.sql.functions import col, explode
-
 from src.services.parser.reference_orchestrator import run_reference_parser
-# from src.services.parser.utils.normalization import normalize_string_columns
 from src.config.endpoints import EndpointKeys
 import src.services.parsing_schemas as schemas
+
+from src.services.parser.utils.reference_builders import (
+    explode_entity,
+    build_array_names_flat_df,
+    build_simple_dim_df,
+)
 from src.app.logger import get_logger
 
 
 logger = get_logger(__name__)
 
 
-def transform_countries(valid_df):
-    logger.info("Start transform_countries")
-
-    result_df = (
-        valid_df
-        .select(
-            "source_file",
-            "bronze_ingested_at",
-            explode(col("data_json.CountryResource.Countries.Country")).alias("country")
-        )
-        .select(
-            col("source_file"),
-            col("bronze_ingested_at"),
-            col("country.CountryCode").alias("country_code"),
-            explode(col("country.Names.Name")).alias("name")
-        )
-        .select(
-            col("source_file"),
-            col("bronze_ingested_at"),
-            col("country_code"),
-            col("name.@LanguageCode").alias("language_code"),
-            col("name.$").alias("country_name")
-        )
-    )
-
-    logger.info("Finish transform_countries")
-    return result_df
-
-
-def build_ref_dim_country(valid_df):
-    logger.info("Start build_ref_dim_country")
-
-    result_df = (
-        valid_df
-        .select(
-            "source_file",
-            "bronze_ingested_at",
-            explode(col("data_json.CountryResource.Countries.Country")).alias("country")
-        )
-        .select(
-            col("source_file"),
-            col("bronze_ingested_at"),
-            col("country.CountryCode").alias("country_code")
-        )
-        .dropDuplicates(["country_code"])
-    )
-
-    logger.info("Finish build_ref_dim_country")
-    return result_df
-
-
 def build_country_outputs(valid_df):
-    ref_country_names_flat_df = (
-        transform_countries(valid_df)
-        # .transform(lambda df: normalize_string_columns(df, ["country_code", "language_code"]))
+    
+    logger.info("Start build_countries_outputs")
+    exploded_df = explode_entity(
+        valid_df=valid_df,
+        entity_path="data_json.CountryResource.Countries.Country",
+        entity_alias="country"
+    )
+
+    logger.info("Start build_array_names_flat")
+    ref_country_names_flat = (
+        build_array_names_flat_df(
+            exploded_df=exploded_df,
+            entity_alias="country",
+            code_field="CountryCode",
+            code_alias="country_code",
+            name_alias="country_name",
+        )
         .dropDuplicates(["country_code", "language_code"])
     )
 
-    ref_dim_country_df = build_ref_dim_country(valid_df)
-    # ref_dim_country_df = build_ref_dim_country(valid_df).transform(
-    #     lambda df: normalize_string_columns(df, ["country_code"])
-    # )
+    logger.info("Start ref_dim_country")
+    ref_dim_country = build_simple_dim_df(
+        exploded_df=exploded_df,
+        entity_alias="country",
+        key_field="CountryCode",
+        key_alias="country_code",
+    )
+    logger.info("Finish build_countries_outputs")
 
     return {
-        "ref_country_names_flat": ref_country_names_flat_df,
-        "ref_dim_country": ref_dim_country_df,
+        "ref_country_names_flat": ref_country_names_flat,
+        "ref_dim_country": ref_dim_country,
     }
-
 
 def run_countries(spark, cfg):
     run_reference_parser(
