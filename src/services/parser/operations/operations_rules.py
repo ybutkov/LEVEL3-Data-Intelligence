@@ -13,14 +13,13 @@ IS_DOUBLE = lambda c: c.cast("double").isNotNull()
 
 FLIGHT_STATUS_BY_ROUTE_RULES = {
     "op_fact_flight_status": {
-        "airline_id": [NOT_NULL, NOT_EMPTY],
-        "flight_number": [NOT_NULL, NOT_EMPTY],
-        "dep_airport": [NOT_NULL, NOT_EMPTY],
-        "arr_airport": [NOT_NULL, NOT_EMPTY],
-    }
+        "marketing_airline_id": [ NOT_NULL, NOT_EMPTY, LENGTH_2 ],
+        "marketing_flight_number": [ NOT_NULL, NOT_EMPTY ],
+        "departure_airport_code": [ NOT_NULL, NOT_EMPTY, LENGTH_3 ],
+        "arrival_airport_code": [ NOT_NULL, NOT_EMPTY, LENGTH_3 ],
+    },
 }
 
 OPERATIONAL_RULES = {
     "flightstatus_by_route_raw": FLIGHT_STATUS_BY_ROUTE_RULES,
-
 }

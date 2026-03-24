@@ -22,14 +22,16 @@ REFERENCE_NORMALIZATION_MAP = {
     # opeational outputs
 OPERATIONAL_NORMALIZATION_MAP = {
     "op_fact_flight_status": [
-        "airline_id",
+        "marketing_airline_id",
         "operating_airline_id",
-        "dep_airport",
-        "arr_airport",
+        "departure_airport_code",
+        "arrival_airport_code",
+        "departure_time_status_code",
+        "arrival_time_status_code",
         "flight_status_code",
-        "dep_time_status_code",
-        "arr_time_status_code",
         "aircraft_code",
+        "aircraft_registration",
+        "service_type",
     ]
 }
 
