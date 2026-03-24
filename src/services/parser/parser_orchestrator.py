@@ -9,15 +9,15 @@ from src.services.parser.utils.parser_utils import (
 from src.config.endpoints import get_endpoint_config
 from src.services.parser.utils.validation_utils import validate_outputs
 from src.services.parser.utils.normalize_utils import normalize_outputs
-# from src.services.parser.references.reference_rules import REFERENCE_RULES
-# from src.services.parser.utils.normalize_utils import REFERENCE_NORMALIZATION_MAP
-# from src.services.parser.utils.cast_utils import cast_outputs
-# from src.services.parser.references.reference_casting import REFERENCE_CASTING_MAP
 from src.services.parser.utils.transform_utils import transform_outputs
-# from src.services.parser.references.reference_transformations import REFERENCE_TRANSFORMATION_MAP
 
 
 logger = get_logger(__name__)
+
+APPEND_TABLES = {
+    "op_fact_flight_status",
+}
+
 
 def run_parser(
     spark,
@@ -28,8 +28,8 @@ def run_parser(
     normalization_map,
     transformation_map,
     rules_map,
-):
-    from src.config.endpoints import get_endpoint_config
+    deduplicate_fn=None,
+): 
 
     endpoint_cfg = get_endpoint_config(endpoint_key)
     dataset_name = endpoint_cfg.bronze_table
@@ -68,23 +68,6 @@ def run_parser(
         if not outputs:
             logger.warning(f"Not outputs for dataset: {dataset_name}")
 
-        # logger.info("Normalize outputs")
-        # outputs = normalize_outputs(
-        #     outputs=outputs,
-        #     normalization_map=REFERENCE_NORMALIZATION_MAP,
-        # )
-        # outputs = cast_outputs(
-        #     outputs=outputs,
-        #     casting_map=REFERENCE_CASTING_MAP,
-        # )
-
-        # logger.info("Validate outputs")
-        # table_rules = REFERENCE_RULES.get(dataset_name, {})
-        # validated_outputs, quarantine_df = validate_outputs(
-        #     outputs=outputs,
-        #     dataset_name=dataset_name,
-        #     table_rules=table_rules,
-        # )
         logger.info("Normalize outputs")
         normalized_outputs = normalize_outputs(
             outputs=outputs,
@@ -114,8 +97,18 @@ def run_parser(
                 logger.info(f"Add silver metadata: {table_name}")
                 df = add_silver_metadata(df)
 
+            write_mode = "append" if table_name in APPEND_TABLES else "overwrite"
+            if deduplicate_fn and table_name in APPEND_TABLES:
+                logger.info(f"Deduplicate before append: {table_name}")
+                df = deduplicate_fn(
+                    spark=spark,
+                    new_df=df,
+                    target_table=full_table_name,
+                )
+
+
             logger.info(f"Write table: {full_table_name}")
-            df.write.mode("overwrite").saveAsTable(full_table_name)
+            df.write.mode(write_mode).saveAsTable(full_table_name)
 
         if quarantine_df is not None:
             logger.info(f"Write quarantine table: {quarantine_table}")

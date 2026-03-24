@@ -1,4 +1,5 @@
-from pyspark.sql.functions import col, explode
+from pyspark.sql import DataFrame
+from pyspark.sql.functions import col, explode, concat_ws, sha2, coalesce, lit
 
 from src.services.parser.parser_orchestrator import run_parser
 from src.config.endpoints import EndpointKeys
@@ -83,6 +84,69 @@ def build_flight_status_outputs(valid_df):
     }
 
 
+def add_flight_key_and_state_hash(df: DataFrame) -> DataFrame:
+    return (
+        df
+        .withColumn(
+            "flight_key",
+            sha2(
+                concat_ws(
+                    "||",
+                    coalesce(col("marketing_airline_id"), lit("")),
+                    coalesce(col("marketing_flight_number"), lit("")),
+                    coalesce(col("departure_airport_code"), lit("")),
+                    coalesce(col("arrival_airport_code"), lit("")),
+                    coalesce(col("scheduled_departure_utc").cast("string"), lit("")),
+                ),
+                256,
+            ),
+        )
+        .withColumn(
+            "state_hash",
+            sha2(
+                concat_ws(
+                    "||",
+                    coalesce(col("actual_departure_utc").cast("string"), lit("")),
+                    coalesce(col("estimated_departure_utc").cast("string"), lit("")),
+                    coalesce(col("actual_arrival_utc").cast("string"), lit("")),
+                    coalesce(col("estimated_arrival_utc").cast("string"), lit("")),
+                    coalesce(col("departure_time_status_code"), lit("")),
+                    coalesce(col("arrival_time_status_code"), lit("")),
+                    coalesce(col("flight_status_code"), lit("")),
+                    coalesce(col("departure_gate"), lit("")),
+                    coalesce(col("arrival_gate"), lit("")),
+                    coalesce(col("aircraft_code"), lit("")),
+                    coalesce(col("aircraft_registration"), lit("")),
+                ),
+                256,
+            ),
+        )
+    )
+
+
+def deduplicate_unchanged_flight(
+    spark,
+    new_df: DataFrame,
+    target_table: str,
+) -> DataFrame:
+
+    new_df_wth_keys = add_flight_key_and_state_hash(new_df)
+
+    if not spark.catalog.tableExists(target_table):
+        return new_df_wth_keys.drop("flight_key", "state_hash")
+
+    existing_df = (add_flight_key_and_state_hash(spark.table(target_table))
+        .select("flight_key", "state_hash")
+        .dropDuplicates()
+    )
+
+    return new_df_wth_keys.join(
+        existing_df,
+        on=["flight_key", "state_hash"],
+        how="left_anti",
+    ).drop("flight_key", "state_hash")
+
+
 def run_flight_status_by_route(spark, cfg):
     run_parser(
         spark=spark,
@@ -93,4 +157,5 @@ def run_flight_status_by_route(spark, cfg):
         normalization_map=OPERATIONAL_NORMALIZATION_MAP,
         transformation_map=OPERATIONAL_TRANSFORMATION_MAP,
         rules_map=OPERATIONAL_RULES,
+        deduplicate_fn=deduplicate_unchanged_flight,
     )
