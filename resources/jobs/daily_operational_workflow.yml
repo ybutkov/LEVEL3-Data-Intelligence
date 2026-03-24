@@ -1,0 +1,38 @@
+resources:
+  jobs:
+    daily_operational_workflow:
+      name: daily_operational_workflow
+
+      trigger:
+        pause_status: UNPAUSED
+        periodic:
+          interval: 1
+          unit: DAYS
+
+      tasks:
+
+        # 1. FETCH (API → landing_area)
+        - task_key: fetch_operational_data
+          spark_python_task:
+            python_file: ${workspace.file_path}/src/1_bronze/daily_fetch.py
+
+        # 2. BRONZE (Auto Loader pipeline)
+        - task_key: load_to_bronze
+          depends_on:
+            - task_key: fetch_operational_data
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.ingestion_pipeline_autoload.id}
+
+        # 3. SILVER (parse + validate + deduplicate)
+        - task_key: build_silver_operational
+          depends_on:
+            - task_key: load_to_bronze
+          spark_python_task:
+            python_file: ${workspace.file_path}/src/2_silver/operations/operations_silver_job.py
+
+        # 4. GOLD (still empty)
+        - task_key: build_gold_operational
+          depends_on:
+            - task_key: build_silver_operational
+          spark_python_task:
+            python_file: ${workspace.file_path}/src/3_gold/operations/operations_gold_job.py
