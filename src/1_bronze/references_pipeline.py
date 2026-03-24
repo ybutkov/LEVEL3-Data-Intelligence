@@ -1,19 +1,25 @@
+import sys
+
+root_path = spark.conf.get("root_path")
+if root_path and root_path not in sys.path:
+    sys.path.insert(0, root_path)
+
 from src.config.endpoints import EndpointKeys
 from src.config.endpoints import get_endpoint_config
 from src.config.endpoints import EndpointConfig
 from src.config.config_properties import ConfigProperties
-from src.config.config_properties import get_ConfigProperties 
+from src.config.config_properties import get_ConfigProperties
+from src.app.logger import get_logger
 
 from pyspark import pipelines as dp
 from pyspark.sql import functions as F
 
-CATALOG = "lufthansa_level"
-SCHEMA = "bronze"
-LANDING_VOLUME = "landing_area"
-META_VOLUME = "autoloader_metadata"
 
+CATALOG = spark.conf.get("catalog")
+SCHEMA = spark.conf.get("schema")
+LANDING_VOLUME = spark.conf.get("landing_area")
+META_VOLUME = spark.conf.get("meta_volume")
 
-# configProperties = get_ConfigProperties()
 
 ENDPOINTKEYS_PIPELINE_LIST = [
     EndpointKeys.AIRPORTS,
@@ -26,72 +32,81 @@ ENDPOINTKEYS_PIPELINE_LIST = [
     EndpointKeys.FLIGHTSCHEDULES_BY_ROUTE,
     EndpointKeys.FLIGHTSTATUS_BY_DEPARTURE,
     EndpointKeys.FLIGHTSTATUS_BY_ARRIVAL,
-
 ]
 
+
 def build_source_path(endpoint_config: EndpointConfig) -> str:
-    base_path = (
+    return (
         f"/Volumes/{CATALOG}/"
         f"{SCHEMA}/"
         f"{LANDING_VOLUME}/"
         f"{endpoint_config.raw_folder}"
     )
-    return base_path
 
 
 def build_schema_location(endpoint_config: EndpointConfig) -> str:
-    base_path = (
+    return (
         f"/Volumes/{CATALOG}/"
         f"{SCHEMA}/"
         f"{META_VOLUME}/"
         f"{endpoint_config.raw_folder}/"
         f"schema"
     )
-    return base_path
 
-# TODO: time_period ?
-def build_stream(endpoint_config: EndpointConfig, configProperties: ConfigProperties):
+
+def build_stream(endpoint_config: EndpointConfig, config_properties: ConfigProperties):
     source_path = build_source_path(endpoint_config)
-    # checkpoint_location  = endpoint_config.build_checkpoint_location(configProperties.storage)
     schema_location = build_schema_location(endpoint_config)
-    
-    df = (spark.readStream
+
+    df = (
+        spark.readStream
         .format("cloudFiles")
         .option("cloudFiles.format", "binaryFile")
         .option("cloudFiles.schemaLocation", schema_location)
         .load(source_path)
     )
-        # .select(
-        #     F.col("content").cast("string").alias("raw_json"),
-        #     F.col("path").alias("source_file"),       
-        #     F.col("modificationTime").alias("source_file_modification_time"),          
-        #     F.current_timestamp().alias("bronze_ingested_at"),)
+
     df = (
         df
         .withColumn("raw_json", F.col("content").cast("string"))
         .withColumnRenamed("path", "source_file")
         .withColumn("bronze_ingested_at", F.current_timestamp())
+        # .withColumn("endpoint_name", F.lit(endpoint_config.raw_folder))
         .drop("content", "length")
     )
-    df = df.select(
+
+    fixed_first_cols = [
         "bronze_ingested_at",
         "source_file",
         "modificationTime",
-        *[col for col in df.columns if col not in {"bronze_ingested_at", "source_file", "modificationTime", "raw_json"}],
-        "raw_json"
+        # "endpoint_name",
+    ]
+
+    fixed_last_cols = ["raw_json"]
+
+    middle_cols = [
+        c for c in df.columns
+        if c not in set(fixed_first_cols + fixed_last_cols)
+    ]
+
+    df = df.select(
+        *fixed_first_cols,
+        *middle_cols,
+        *fixed_last_cols,
     )
+
     return df
 
 
-def register_raw_table(endpoint_config: EndpointConfig, configProperties: ConfigProperties):
+def register_raw_table(endpoint_config: EndpointConfig, config_properties: ConfigProperties):
     @dp.table(name=endpoint_config.bronze_table)
     def _table():
-        return build_stream(endpoint_config, configProperties)
+        return build_stream(endpoint_config, config_properties)
 
     return _table
 
 
 for endpoint_key in ENDPOINTKEYS_PIPELINE_LIST:
     endpoint_config = get_endpoint_config(endpoint_key)
-    configProperties = get_ConfigProperties()
-    register_raw_table(endpoint_config=endpoint_config, configProperties=configProperties)
+    config_properties = get_ConfigProperties()
+    register_raw_table(endpoint_config=endpoint_config, config_properties=config_properties)

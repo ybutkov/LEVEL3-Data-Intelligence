@@ -21,13 +21,14 @@ storage:
   landing_volume: landing_area
   autoloader_volume: autoloader_metadata
 
-# full_save_path = "{landing_dir}{dir_time}/{file_name_datetime_prefix}{file_name}"
+# full_save_path = "{landing_dir}{dir_time}{file_name_datetime_prefix}{file_name}"
 path_template:
   landing_dir: "/Volumes/{catalog}/{bronze_schema}/{landing_volume}/{raw_folder}/"
   dir_time_template:
-    daily: "%Y-%m-%d"
-    monthly: "%Y-%m"
-    default: "%Y-%m"
+    daily: "%Y-%m-%d/"
+    monthly: "%Y-%m/"
+    default: ""
+    # default: "%Y-%m"
   file_name:
     datetime_prefix: "%Y%m%dT%H%M%S_"
     single_name: "data.json"

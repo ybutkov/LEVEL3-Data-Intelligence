@@ -67,6 +67,8 @@ endpoints:
         path_params: ["origin", "destination", "fromDateTime"] 
         query_params: ["offset", "limit", "lang"]
         paginable: True
+        # If true, a 404 indicates the whole endpoint/request should stop
+        stop_on_404: True
 
     flight_schedules:
         path: "/flight-schedules/flightschedules/passenger"
@@ -76,3 +78,53 @@ endpoints:
         query_params: ["airlines", "flightNumberRanges", "startDate", "endDate", "daysOfOperation", "timeMode"] 
         paginable: False
         validation_path: [0, "airline"]
+
+    # /operations/schedules/{origin}/{destination}/{fromDateTime}[?directFlights=true]
+    flight_schedules_by_route:
+        path: "/operations/schedules/{origin}/{destination}/{fromDateTime}"
+        resource_key: "ScheduleResource"
+        collection_path: ["Schedule", "TotalJourney"]
+        raw_folder: "flight_schedules_by_route"
+        raw_folder_details: "origin={origin}/destination={destination}/"
+        bronze_table: "flight_schedules_by_route_raw"
+        silver_table: "flight_schedules_by_route"   
+        path_params: ["origin", "destination", "fromDateTime"] 
+        paginable: False
+        # If true, a 404 indicates the whole endpoint/request should stop
+        stop_on_404: True
+
+    # /operations/flightstatus/departures/{airportCode}/{fromDateTime}?serviceType={serviceType}
+    # limit=50 !!!!!!
+    flightstatus_by_departure:
+        path: "/operations/flightstatus/departures/{airportCode}/{fromDateTime}"
+        resource_key: "FlightStatusResource"
+        collection_path: ["FlightStatusResource", "Flights", "Flight"]
+        total_count_path: ["FlightStatusResource", "Meta", "TotalCount"]
+        raw_folder: "flightstatus_by_departure"
+        raw_folder_details: "departure={airportCode}/"
+        bronze_table: "flightstatus_by_departure_raw"
+        silver_table: "flightstatus_by_departure"   
+        path_params: ["airportCode", "fromDateTime"] 
+        query_params: ["offset", "limit", "lang"]
+        paginable: True
+        limit_max: 50
+        # If true, a 404 indicates the whole endpoint/request should stop
+        stop_on_404: True
+    
+    # /operations/flightstatus/arrivals/{airportCode}/{fromDateTime}?serviceType={serviceType}
+    # limit=50 !!!!!!
+    flightstatus_by_arrival:
+        path: "/operations/flightstatus/arrivals/{airportCode}/{fromDateTime}"
+        resource_key: "FlightStatusResource"
+        collection_path: ["FlightStatusResource", "Flights", "Flight"]
+        total_count_path: ["FlightStatusResource", "Meta", "TotalCount"]
+        raw_folder: "flightstatus_by_arrival"
+        raw_folder_details: "arrival={airportCode}/"
+        bronze_table: "flightstatus_by_arrival_raw"
+        silver_table: "flightstatus_by_arrival"   
+        path_params: ["airportCode", "fromDateTime"] 
+        query_params: ["offset", "limit", "lang"]
+        paginable: True
+        limit_max: 50
+        # If true, a 404 indicates the whole endpoint/request should stop
+        stop_on_404: True
