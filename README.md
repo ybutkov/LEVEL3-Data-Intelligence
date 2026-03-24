@@ -19,22 +19,3 @@ By the end of the track, you will have built a production-style data intelligenc
   ### Optional:
 - CI/CD-enabled, production-oriented data workflows
 
-This project mirrors how modern organizations operationalize data intelligence to support real business decisions.
-
-## Learning Path
-
-- [Part 1: Fundamentals](part-1-Fundamentals.md)
-
-
-- [Part 2: Data Ingestion](part-2-Data-Ingestion.md)
-
-
-- [Part 3: Data Transformation](part-3-Data-Transformations.md)
-
-- [Part 4: Data Serving](part-4-Data-Serving.md)
-
-- [Part 5: Infrastructure as Code (Optional)](part-5-Infrastructure-as-Code.md)
-
-- [Part 6: CI/CD Pipelines (Optional)](part-6-CI-CD-Pipelines.md)
-
-- 1
