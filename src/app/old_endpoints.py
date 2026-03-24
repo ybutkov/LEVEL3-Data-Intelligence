@@ -36,7 +36,7 @@ LIST_ENDPOINTS = {
 }
 
 def get_endpoint(endpoint_key, **params):
-    # Check if endpoint exist
+    # TODO: Check if endpoint exist
     template = ENDPOINTS[endpoint_key]
     endpoint_with_params = template.format(**params)
     full_url = f"{endpoint_with_params}"

@@ -1,0 +1,20 @@
+resources:
+  jobs:
+    silver_operations_parser:
+      name: silver_operations_parser
+      tasks:
+        - task_key: parse_operations_task
+          spark_python_task:
+            python_file: ${workspace.file_path}/src/2_silver/operations_silver_job.py
+            parameters:
+              - --root_path
+              - "${workspace.file_path}"
+          environment_key: default
+      queue:
+        enabled: true
+      environments:
+        - environment_key: default
+          spec:
+            environment_version: "5"
+      performance_target: PERFORMANCE_OPTIMIZED
+      max_concurrent_runs: 1

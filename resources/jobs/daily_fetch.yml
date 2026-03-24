@@ -1,0 +1,26 @@
+resources:
+  jobs:
+    daily_fetch_operations:
+      name: daily_fetch_operations
+      tasks:
+        - task_key: daily_fetch_task
+          spark_python_task:
+            python_file: ${workspace.file_path}/src/1_bronze/daily_fetch.py
+            parameters:
+              - --root_path
+              - "${workspace.file_path}"
+          environment_key: default
+      queue:
+        enabled: true
+      environments:
+        - environment_key: default
+          spec:
+            environment_version: "5"
+            # environment_variables:
+            #   PYTHONPATH: "${workspace.file_path}"
+      performance_target: PERFORMANCE_OPTIMIZED
+      max_concurrent_runs: 1
+      schedule:
+        quartz_cron_expression: "0 0 * * * ?"
+        timezone_id: "UTC"
+        pause_status: "UNPAUSED"

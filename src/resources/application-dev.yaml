@@ -21,14 +21,13 @@ storage:
   landing_volume: landing_area
   autoloader_volume: autoloader_metadata
 
-# full_save_path = "{landing_dir}{dir_time}{file_name_datetime_prefix}{file_name}"
+# full_save_path: "{landing_dir}{dir_time}{file_name_datetime_prefix}{file_name}"
 path_template:
   landing_dir: "/Volumes/{catalog}/{bronze_schema}/{landing_volume}/{raw_folder}/"
   dir_time_template:
     daily: "%Y-%m-%d/"
     monthly: "%Y-%m/"
     default: ""
-    # default: "%Y-%m"
   file_name:
     datetime_prefix: "%Y%m%dT%H%M%S_"
     single_name: "data.json"
@@ -36,15 +35,3 @@ path_template:
   # file_name: "page_{page:03d}_offset_{offset:05d}_limit_{limit}.json"
   file_name_single: "data.json"
   
-# delete from
-landing:
-  landing_root: "/Volumes/main/lufthansa_bronze/landing_area/tmp"
-
-  bronse:
-    bronze_root: "main.lufthansa_bronze.{entity_name}"
-
-format:
-    ts_format: "%Y%m%dT%H%M%S"
-    ts_dayly_format: "%Y-%m-%d"
-    ts_monthly_format: "%Y-%m"
-# to

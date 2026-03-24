@@ -3,11 +3,8 @@ bundle:
 
 include:
   - resources/*.yml
-
-# artifacts:
-#   default:
-#     type: whl
-#     build: python3
+  - resources/jobs/*.yml
+  - resources/pipelines/*.yml
 
 variables:
   catalog:
@@ -27,27 +24,3 @@ targets:
     variables:
       catalog: lufthansa_level
       schema: bronze
-
-# bundle:
-#   name: lufthansa_bundle
-
-# include:
-#   - resources/*.yml
-
-# what to exlude
-# sync:
-#   exclude:
-#     - er_diagram.md
-
-# targets:
-#   dev:
-#     mode: development
-#     default: true
-#     workspace:
-#       host: https://dbc-5ac54e60-f19e.cloud.databricks.com
-#       root_path: /Workspace/Users/${workspace.current_user.userName}/.bundle/${bundle.name}/${bundle.target}
-
-#   prod:
-#     mode: production
-#     workspace:
-#       root_path: /Workspace/Shared/.bundle/${bundle.name}/${bundle.target}

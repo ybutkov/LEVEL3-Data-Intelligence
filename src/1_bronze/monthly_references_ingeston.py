@@ -3,14 +3,13 @@ import sys, os, argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("--root_path", default="")
 args,_ = parser.parse_known_args()
-if args.root_path:
+if args.root_path and args.root_path not in sys.path:
     sys.path.insert(0, args.root_path)
     
 from src.app.init_app import init_app
 from src.app.logger import get_logger
 from src.config.endpoints import EndpointKeys
 from src.services.ingestion_service import get_and_save_all_pages
-from src.services.storage_service import load_json_to_bronze_autoloader
 
 
 def ingest_reference_entity_monthly(endpoint):
@@ -23,10 +22,6 @@ def ingest_reference_entity_monthly(endpoint):
         time_period="monthly",
     )
 
-    # load_json_to_bronze_autoloader(
-    #     endpoint=endpoint,
-    #     time_period="monthly",
-    # )
     logger.info(f"Finish monthly reference ingest for {endpoint.value}")
 
 
