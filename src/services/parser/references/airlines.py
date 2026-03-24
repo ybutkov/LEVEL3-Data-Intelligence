@@ -1,9 +1,12 @@
-from src.services.parser.reference_orchestrator import run_reference_parser
+from src.services.parser.parser_orchestrator import run_parser
 from src.services.parser.utils.reference_builders import (
     explode_entity,
     build_single_names_flat_df,
     build_simple_dim_df,
 )
+from src.services.parser.references.reference_rules import REFERENCE_RULES
+from src.services.parser.utils.normalize_utils import REFERENCE_NORMALIZATION_MAP
+from src.services.parser.references.reference_transformations import REFERENCE_TRANSFORMATION_MAP
 from src.config.endpoints import EndpointKeys
 import src.services.parsing_schemas as schemas
 from src.app.logger import get_logger
@@ -53,10 +56,13 @@ def build_airline_outputs(valid_df):
 
 
 def run_airlines(spark, cfg):
-    run_reference_parser(
+    run_parser(
         spark=spark,
         cfg=cfg,
         endpoint_key=EndpointKeys.AIRLINES,
         schema=schemas.airline_resource_schema,
         build_outputs_fn=build_airline_outputs,
+        normalization_map=REFERENCE_NORMALIZATION_MAP,
+        transformation_map=REFERENCE_TRANSFORMATION_MAP,
+        rules_map=REFERENCE_RULES
     )

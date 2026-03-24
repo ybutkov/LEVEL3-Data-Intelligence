@@ -9,20 +9,25 @@ from src.services.parser.utils.parser_utils import (
 from src.config.endpoints import get_endpoint_config
 from src.services.parser.utils.validation_utils import validate_outputs
 from src.services.parser.utils.normalize_utils import normalize_outputs
-from src.services.parser.references.reference_rules import REFERENCE_RULES
-from src.services.parser.utils.normalize_utils import REFERENCE_NORMALIZATION_MAP
-from src.services.parser.utils.cast_utils import cast_outputs
-from src.services.parser.references.reference_casting import REFERENCE_CASTING_MAP
+# from src.services.parser.references.reference_rules import REFERENCE_RULES
+# from src.services.parser.utils.normalize_utils import REFERENCE_NORMALIZATION_MAP
+# from src.services.parser.utils.cast_utils import cast_outputs
+# from src.services.parser.references.reference_casting import REFERENCE_CASTING_MAP
+from src.services.parser.utils.transform_utils import transform_outputs
+# from src.services.parser.references.reference_transformations import REFERENCE_TRANSFORMATION_MAP
+
 
 logger = get_logger(__name__)
 
-
-def run_reference_parser(
+def run_parser(
     spark,
     cfg,
     endpoint_key,
     schema,
     build_outputs_fn,
+    normalization_map,
+    transformation_map,
+    rules_map,
 ):
     from src.config.endpoints import get_endpoint_config
 
@@ -63,20 +68,39 @@ def run_reference_parser(
         if not outputs:
             logger.warning(f"Not outputs for dataset: {dataset_name}")
 
+        # logger.info("Normalize outputs")
+        # outputs = normalize_outputs(
+        #     outputs=outputs,
+        #     normalization_map=REFERENCE_NORMALIZATION_MAP,
+        # )
+        # outputs = cast_outputs(
+        #     outputs=outputs,
+        #     casting_map=REFERENCE_CASTING_MAP,
+        # )
+
+        # logger.info("Validate outputs")
+        # table_rules = REFERENCE_RULES.get(dataset_name, {})
+        # validated_outputs, quarantine_df = validate_outputs(
+        #     outputs=outputs,
+        #     dataset_name=dataset_name,
+        #     table_rules=table_rules,
+        # )
         logger.info("Normalize outputs")
-        outputs = normalize_outputs(
+        normalized_outputs = normalize_outputs(
             outputs=outputs,
-            normalization_map=REFERENCE_NORMALIZATION_MAP,
+            normalization_map=normalization_map,
         )
-        outputs = cast_outputs(
-            outputs=outputs,
-            casting_map=REFERENCE_CASTING_MAP,
+
+        logger.info("Transform outputs")
+        transformed_outputs = transform_outputs(
+            outputs=normalized_outputs,
+            transformation_map=transformation_map,
         )
 
         logger.info("Validate outputs")
-        table_rules = REFERENCE_RULES.get(dataset_name, {})
+        table_rules = rules_map.get(dataset_name, {})
         validated_outputs, quarantine_df = validate_outputs(
-            outputs=outputs,
+            outputs=transformed_outputs,
             dataset_name=dataset_name,
             table_rules=table_rules,
         )

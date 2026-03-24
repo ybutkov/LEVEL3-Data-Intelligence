@@ -19,6 +19,21 @@ REFERENCE_NORMALIZATION_MAP = {
     "ref_aircraft_names_flat": ["aircraft_code", "language_code"],
 }
 
+    # opeational outputs
+OPERATIONAL_NORMALIZATION_MAP = {
+    "op_fact_flight_status": [
+        "airline_id",
+        "operating_airline_id",
+        "dep_airport",
+        "arr_airport",
+        "flight_status_code",
+        "dep_time_status_code",
+        "arr_time_status_code",
+        "aircraft_code",
+    ]
+}
+
+
 def normalize_code_columns(df: DataFrame, columns: list[str]) -> DataFrame:
     result_df = df
 
