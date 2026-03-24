@@ -53,12 +53,14 @@ def log_invalid_records(
     if dataset_name is not None:
         log_df = log_df.withColumn("dataset_name", lit(dataset_name))
 
+    # TODO: if we use count
     # invalid_count = log_df.count()
     # if invalid_count > 0:
     log_df = log_df.withColumn("logged_at", current_timestamp())
     log_df.write.mode("append").saveAsTable(log_table)
     logger.warning(
         f"Invalid rows written to {log_table}, dataset_name={dataset_name}"
+        # TODO: If we use count
         # f"Invalid rows written to {log_table}, dataset_name={dataset_name}: {invalid_count}"
     )
 

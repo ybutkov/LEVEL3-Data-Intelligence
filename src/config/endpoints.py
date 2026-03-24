@@ -5,9 +5,7 @@ from enum import Enum
 from dataclasses import dataclass, field
 from typing import Any
 from dataclasses import dataclass
-from typing import List
 from typing import Optional
-import yaml
 import datetime
 
 
@@ -78,7 +76,6 @@ class EndpointConfig:
         time = datetime.datetime.now()
         # TODO: Make time_period="default" for default value
         if time_period in ("daily", "monthly"):
-            # time_dir = datetime.datetime.now().strftime(cfg.path_template.dir_time_template.monthly)
             dir_time = time.strftime(configProperties.path_template.dir_time_template[time_period])
         else:
             dir_time = time.strftime(configProperties.path_template.dir_time_template["default"])
@@ -126,16 +123,6 @@ class EndpointConfig:
 
     def build_silver_table_name(self, storage_cfg) -> str:
         return f"{storage_cfg.catalog}.{storage_cfg.silver_schema}.{self.silver_table}"
-    
-    # def is_valid_response(self, data) -> bool:
-    #     if data is None:
-    #         return False
-    #     if self.resource_key is not None:
-    #         return get_value_by_path(data, (self.resource_key,)) is not None
-    #     if self.validation_path is not None:
-    #         return get_value_by_path(data, self.validation_path) is not None
-    #     # TODO: add more checks? (collection_path) or just return True. Last checking?
-    #     return isinstance(data, (dict, list))
     
     def is_valid_response(self, data) -> bool:
         if data is None:

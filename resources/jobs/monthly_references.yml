@@ -1,0 +1,25 @@
+resources:
+  jobs:
+    monthly_references_ingestion:
+      name: monthly_references_ingestion
+      tasks:
+        - task_key: reference_monthly_task
+          spark_python_task:
+            python_file: ${workspace.file_path}/src/1_bronze/monthly_references_ingeston.py
+            parameters:
+              - --root_path
+              - "${workspace.file_path}"
+          environment_key: default
+      queue:
+        enabled: true
+      environments:
+        - environment_key: default
+          spec:
+            environment_version: "5"
+      performance_target: PERFORMANCE_OPTIMIZED
+      max_concurrent_runs: 1
+      schedule:
+        quartz_cron_expression: 25 14 7 20 * ?
+        timezone_id: Europe/Berlin
+        pause_status: UNPAUSED
+

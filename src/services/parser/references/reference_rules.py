@@ -33,7 +33,7 @@ CITY_RULES = {
     "ref_city_names_flat": {
         "city_code": [ NOT_NULL, LENGTH_3],
         "language_code": [ NOT_NULL, LENGTH_2 ],
-        "city_name": [ NOT_NULL, NOT_EMPTY ], # add IS_UPPER for test with lower norm
+        "city_name": [ NOT_NULL, NOT_EMPTY ],
     },
     "ref_city_airport_map": {
         "city_code": [ NOT_NULL, LENGTH_3 ],
@@ -61,7 +61,8 @@ AIRPORT_RULES = {
 
 AIRLINE_RULES = {
     "ref_dim_airline": {
-        "airline_id": [ NOT_NULL, LENGTH_2 ], # AIRLINE_LENGTH ???
+         # TODO: AIRLINE_LENGTH 2 or 3 ???
+        "airline_id": [ NOT_NULL, LENGTH_2 ],
     },
     "ref_airline_names_flat": {
         "airline_id": [ NOT_NULL, LENGTH_2 ],

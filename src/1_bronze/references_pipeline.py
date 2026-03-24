@@ -9,7 +9,6 @@ from src.config.endpoints import get_endpoint_config
 from src.config.endpoints import EndpointConfig
 from src.config.config_properties import ConfigProperties
 from src.config.config_properties import get_ConfigProperties
-from src.app.logger import get_logger
 
 from pyspark import pipelines as dp
 from pyspark.sql import functions as F
@@ -71,7 +70,6 @@ def build_stream(endpoint_config: EndpointConfig, config_properties: ConfigPrope
         .withColumn("raw_json", F.col("content").cast("string"))
         .withColumnRenamed("path", "source_file")
         .withColumn("bronze_ingested_at", F.current_timestamp())
-        # .withColumn("endpoint_name", F.lit(endpoint_config.raw_folder))
         .drop("content", "length")
     )
 
@@ -79,7 +77,6 @@ def build_stream(endpoint_config: EndpointConfig, config_properties: ConfigPrope
         "bronze_ingested_at",
         "source_file",
         "modificationTime",
-        # "endpoint_name",
     ]
 
     fixed_last_cols = ["raw_json"]

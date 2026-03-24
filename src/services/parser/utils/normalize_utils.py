@@ -19,7 +19,8 @@ REFERENCE_NORMALIZATION_MAP = {
     "ref_aircraft_names_flat": ["aircraft_code", "language_code"],
 }
 
-    # opeational outputs
+# opeational outputs
+
 OPERATIONAL_NORMALIZATION_MAP = {
     "op_fact_flight_status": [
         "marketing_airline_id",
@@ -41,7 +42,7 @@ def normalize_code_columns(df: DataFrame, columns: list[str]) -> DataFrame:
 
     for column in columns:
         if column in result_df.columns:
-            result_df = result_df.withColumn(column, upper(trim(col(column)))) # Change to lower for test
+            result_df = result_df.withColumn(column, upper(trim(col(column))))
     return result_df
 
 def normalize_outputs(outputs: dict[str, DataFrame], normalization_map: dict[str, list[str]]):
