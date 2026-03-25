@@ -3,6 +3,11 @@ resources:
     daily_operational_workflow:
       name: daily_operational_workflow
 
+      schedule:
+        quartz_cron_expression: "0 0 5 * * ?"
+        timezone_id: Europe/Berlin
+        pause_status: UNPAUSED
+
       tasks:
         # 1. FETCH (API → landing_area)
         - task_key: fetch_operational_data
