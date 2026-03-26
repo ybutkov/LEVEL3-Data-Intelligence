@@ -1,11 +1,11 @@
 resources:
   jobs:
-    silver_operations_parser:
-      name: silver_operations_parser
+    temp_gold:
+      name: operations_gold
       tasks:
-        - task_key: parse_operations_task
+        - task_key: operations_gold_task
           spark_python_task:
-            python_file: ${workspace.file_path}/src/2_silver/operations/operations_silver_job.py
+            python_file: ${workspace.file_path}/src/3_gold/operations/operations_gold_job.py
             parameters:
               - --root_path
               - "${workspace.file_path}"
@@ -16,5 +16,11 @@ resources:
         - environment_key: default
           spec:
             environment_version: "5"
+            # environment_variables:
+            #   PYTHONPATH: "${workspace.file_path}"
       performance_target: PERFORMANCE_OPTIMIZED
       max_concurrent_runs: 1
+      schedule:
+        quartz_cron_expression: "0 0 * * * ?"
+        timezone_id: "UTC"
+        pause_status: "UNPAUSED"
