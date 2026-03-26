@@ -33,7 +33,7 @@ def ingest_references_monthly():
         # EndpointKeys.AIRPORTS,
         # EndpointKeys.CITIES,
         EndpointKeys.COUNTRIES,
-        EndpointKeys.AIRLINES,
+        # EndpointKeys.AIRLINES,
         # EndpointKeys.AIRCRAFT,
     ]
 

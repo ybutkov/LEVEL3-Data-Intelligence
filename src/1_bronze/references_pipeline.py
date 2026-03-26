@@ -13,6 +13,7 @@ from src.config.config_properties import get_ConfigProperties
 from pyspark import pipelines as dp
 from pyspark.sql import functions as F
 
+import uuid
 
 CATALOG = spark.conf.get("catalog")
 SCHEMA = spark.conf.get("schema")
@@ -32,6 +33,8 @@ ENDPOINTKEYS_PIPELINE_LIST = [
     EndpointKeys.FLIGHTSTATUS_BY_DEPARTURE,
     EndpointKeys.FLIGHTSTATUS_BY_ARRIVAL,
 ]
+
+INGEST_RUN_ID = str(uuid.uuid4())
 
 
 def build_source_path(endpoint_config: EndpointConfig) -> str:
@@ -70,6 +73,7 @@ def build_stream(endpoint_config: EndpointConfig, config_properties: ConfigPrope
         .withColumn("raw_json", F.col("content").cast("string"))
         .withColumnRenamed("path", "source_file")
         .withColumn("bronze_ingested_at", F.current_timestamp())
+        .withColumn("ingest_run_id", F.lit(INGEST_RUN_ID).cast("string"))
         .drop("content", "length")
     )
 
