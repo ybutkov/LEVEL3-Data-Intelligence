@@ -13,6 +13,9 @@ resources:
         - task_key: fetch_operational_data
           spark_python_task:
             python_file: ${workspace.file_path}/src/1_bronze/daily_fetch.py
+            parameters:
+              - --root_path
+              - "${workspace.file_path}"
           environment_key: default
 
         # 2. BRONZE (Auto Loader pipeline)
@@ -28,6 +31,9 @@ resources:
             - task_key: load_to_bronze
           spark_python_task:
             python_file: ${workspace.file_path}/src/2_silver/operations/operations_silver_job.py
+            parameters:
+              - --root_path
+              - "${workspace.file_path}"
           environment_key: default
 
         # 4. GOLD (still empty)
@@ -36,6 +42,9 @@ resources:
             - task_key: build_silver_operational
           spark_python_task:
             python_file: ${workspace.file_path}/src/3_gold/operations/operations_gold_job.py
+            parameters:
+              - --root_path
+              - "${workspace.file_path}"
           environment_key: default
 
       queue:

@@ -64,12 +64,23 @@ def ingest_operational_daily():
                 endpoint=EndpointKeys.FLIGHTSTATUS_BY_ROUTE,
                 path_params=path_params,
                 query_params={},
-                limit=80,
+                limit=50,
                 time_period="daily",
             )
         except Exception as e:
             logger.exception(f"Failed route {origin}->{destination}: {e}")
 
+        # query_params = {
+        #     "airlines": "LH",
+        #     "startDate": "10MAR26",
+        #     "endDate": "15MAR26",
+        #     "daysOfOperation": "1234567",
+        #     "timeMode": "UTC"
+        # }
+        # ingest_operational_entity_daily(
+        #     EndpointKeys.FLIGHT_SCHEDULES, 
+        #     query_params=query_params
+        # )
     logger.info("Finish daily operational ingestion job")
 
 
