@@ -29,78 +29,64 @@ country_resource_schema = StructType([
 
 
 @dp.view
-def countries_raw_cdc():
-    return spark.readStream.option("readChangeData", "true").table("lufthansa_level.bronze.countries_raw")
-
-
-@dp.view
-def countries_parsed():
-    countries_cdf = spark.readStream.table("countries_raw_cdc")
-    
-    parsed_df = (
-        countries_cdf
-        .select(
-            col("_change_type"),
-            col("_commit_version"),
-            col("source_file"),
-            col("ingest_run_id"),
-            from_json(col("raw_json"), country_resource_schema).alias("data_json")
-        )
-        .select(
-            col("_change_type"),
-            col("_commit_version"),
-            col("source_file"),
-            col("ingest_run_id"),
-            explode(col("data_json.CountryResource.Countries.Country")).alias("country")
-        )
-    )
-    
-    return parsed_df
-
-
-@dp.view
-def countries_dim_data():
-    parsed = spark.readStream.table("countries_parsed")
+@dp.expect_or_drop("valid_id", "country_code IS NOT NULL")
+def countries_cleaned():
     return (
-        parsed
+        dp.read_stream("lufthansa_level.bronze.countries_raw")
         .select(
-            col("source_file"),
+            col("bronze_ingested_at").alias("sync_ts"),
+            col("ingest_run_id"),
+            from_json(col("raw_json"), country_resource_schema).alias("data")
+        )
+        .select(
+            col("sync_ts"),
+            col("ingest_run_id"),
+            explode(col("data.CountryResource.Countries.Country")).alias("country")
+        )
+        .select(
+            col("sync_ts"),
             col("ingest_run_id"),
             col("country.CountryCode").alias("country_code"),
+            col("country.Names.Name").alias("names_array")
         )
-        .dropDuplicates(["country_code"])
     )
 
 
-@dp.table
-def ref_dim_country():
-    return spark.readStream.table("countries_dim_data")
+dp.create_streaming_table("ref_dim_country")
 
+dp.apply_changes(
+    target = "ref_dim_country",
+    source = "countries_cleaned",
+    keys = ["country_code"],
+    sequence_by = col("sync_ts"),
+    stored_as_scd_type = 1
+)
 
 @dp.view
-def country_names_data():
-    parsed = spark.readStream.table("countries_parsed")
-    
+def names_exploded():
     return (
-        parsed
+        dp.read_stream("countries_cleaned")
         .select(
-            col("source_file"),
+            col("sync_ts"),
+            col("country_code"),
             col("ingest_run_id"),
-            col("country.CountryCode").alias("country_code"),
-            explode(col("country.Names.Name")).alias("name")
+            explode(col("names_array")).alias("n")
         )
         .select(
-            col("source_file"),
+            col("sync_ts"),
             col("ingest_run_id"),
             col("country_code"),
-            col("name.`@LanguageCode`").alias("language_code"),
-            col("name.`$`").alias("country_name"),
+            col("n.`@LanguageCode`").alias("language_code"),
+            col("n.`$`").alias("country_name")
         )
-        .dropDuplicates(["country_code", "language_code"])
     )
 
+dp.create_streaming_table("ref_country_names_flat")
 
-@dp.table
-def ref_country_names_flat():
-    return spark.readStream.table("country_names_data")
-
+dp.apply_changes(
+    target = "ref_country_names_flat",
+    source = "names_exploded",
+    keys = ["country_code", "language_code"],
+    sequence_by = col("sync_ts"),
+    stored_as_scd_type = 2
+)
