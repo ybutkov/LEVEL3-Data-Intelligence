@@ -20,8 +20,6 @@ entity_alias="country"
 code_field="CountryCode"
 code_alias="country_code"
 name_alias="country_name"
-key_field="CountryCode"
-key_alias="country_code"
 
 
 @dp.view(
@@ -50,54 +48,58 @@ def exploded_entity():
 
 
 @dp.view
-@dp.expect_all_or_drop(COUNTRY_RULES["ref_country_names_flat"])
-def array_names_flat_df():
-    exploded_names = (
+def array_names_flat_raw():
+    return (
         dp.read_stream("exploded_entity")
         .select(
-            col("source_file"),
-            col("bronze_ingested_at"),
-            col("ingest_run_id"),
+            "source_file",
+            "bronze_ingested_at",
+            "ingest_run_id",
             col(code_alias),
-            explode(col(f"{entity_alias}.Names.Name")).alias("name")
+            explode(col(f"{entity_alias}.Names.Name")).alias("n")
+        )
+        .select(
+            "source_file",
+            "bronze_ingested_at",
+            "ingest_run_id",
+            col(code_alias),
+            lower(trim(col("n.`@LanguageCode`"))).alias("language_code"),
+            col("n.$").alias(name_alias)
         )
     )
-    exploded_names =(
-        exploded_names.select(
-            col("source_file"),
-            col("bronze_ingested_at"),
-            col("ingest_run_id"),
-            col(code_alias),
-            upper(trim(col("name.`@LanguageCode`"))).alias("language_code"),
-            col("name.`$`").alias(name_alias),
-        )
-    )
-    return exploded_names
 
+
+@dp.table(name="ref_country_names_flat_validated")
+@dp.expect_all_or_drop(COUNTRY_RULES["ref_country_names_flat"])
+def array_names_flat_df():
+    return dp.read_stream("array_names_flat_raw")
+
+
+@dp.table(name="silver_audit.err_country_invalid_json")
+def invalid_json():
+    return (
+        dp.read_stream(BRONZE_SOURCE)
+        .withColumn("parsed", from_json(col("raw_json"), schemas.country_resource_schema))
+        .filter(col("parsed").isNull())
+        .select("source_file", "bronze_ingested_at", "ingest_run_id", "raw_json")
+    )
+
+
+@dp.table(name="silver_audit.err_country_quarantine")
+def country_quarantine():
+    df = dp.read_stream("array_names_flat_raw")
+    rules = COUNTRY_RULES["ref_country_names_flat"]
+    combined_condition = " AND ".join([f"({cond})" for cond in rules.values()])
+    return df.filter(f"NOT ({combined_condition})")
 
 @dp.view
 @dp.expect_all_or_drop(COUNTRY_RULES["ref_dim_country"])
 def simple_dim_df():
-    extra_fields = None
-    select_exprs = [
-        col("source_file"),
-        col("bronze_ingested_at"),
-        col("ingest_run_id"),
-        col(code_alias),
-    ]
-
-    if extra_fields:
-        for source_field, target_alias in extra_fields.items():
-            select_exprs.append(
-                col(f"{entity_alias}.{source_field}").alias(target_alias)
-            )
-
-    df = dp.read_stream("exploded_entity").select(*select_exprs)
-    return df
-
+    return dp.read_stream("exploded_entity").select(
+        "source_file", "bronze_ingested_at", "ingest_run_id", col(code_alias)
+    )
 
 dp.create_streaming_table("ref_dim_country")
-
 dp.create_auto_cdc_flow(
     target = "ref_dim_country",
     source = "simple_dim_df",
@@ -108,10 +110,9 @@ dp.create_auto_cdc_flow(
 
 
 dp.create_streaming_table("ref_country_names_flat")
-
 dp.create_auto_cdc_flow(
     target = "ref_country_names_flat",
-    source = "array_names_flat_df",
+    source = "ref_country_names_flat_validated",
     keys = ["country_code", "language_code"],
     sequence_by = col("bronze_ingested_at"),
     stored_as_scd_type = 2,
