@@ -5,17 +5,11 @@ from pyspark import pipelines as dp
 from pyspark.sql.functions import col, explode, from_json, upper, trim, lower
 import src.services.parsing_schemas as schemas
 
-from src.services.scd.utils.rules import (
-    apply_validations,
-    COUNTRY_RULES,
-    CITY_RULES,
-    AIRPORT_RULES,
-    AIRLINE_RULES,
-    AIRCRAFT_RULES,
-)
+from src.services.scd.utils.rules import COUNTRY_RULES
 
 
-BRONZE_SOURCE = "lufthansa_level.bronze.countries_raw"
+COUNTRY_BRONZE_SOURCE = "lufthansa_level.bronze.countries_raw"
+COUTRY_META_FIELDS = ["source_file", "bronze_ingested_at", "ingest_run_id"]
 entity_alias="country"
 code_field="CountryCode"
 code_alias="country_code"
@@ -27,17 +21,13 @@ name_alias="country_name"
 )
 def exploded_entity():
     return (
-        dp.read_stream(BRONZE_SOURCE)
+        dp.read_stream(COUNTRY_BRONZE_SOURCE)
         .select(
-            col("source_file"),
-            col("bronze_ingested_at"),
-            col("ingest_run_id"),
+            *[col(f) for f in COUTRY_META_FIELDS],
             from_json(col("raw_json"), schemas.country_resource_schema).alias("data_json")
         )
         .select(
-            col("source_file"),
-            col("bronze_ingested_at"),
-            col("ingest_run_id"),
+            *[col(f) for f in COUTRY_META_FIELDS],
             explode(col("data_json.CountryResource.Countries.Country")).alias(entity_alias)
         )
         .select(
@@ -52,16 +42,12 @@ def array_names_flat_raw():
     return (
         dp.read_stream("exploded_entity")
         .select(
-            "source_file",
-            "bronze_ingested_at",
-            "ingest_run_id",
+            *[col(f) for f in COUTRY_META_FIELDS],
             col(code_alias),
             explode(col(f"{entity_alias}.Names.Name")).alias("n")
         )
         .select(
-            "source_file",
-            "bronze_ingested_at",
-            "ingest_run_id",
+            *[col(f) for f in COUTRY_META_FIELDS],
             col(code_alias),
             lower(trim(col("n.`@LanguageCode`"))).alias("language_code"),
             col("n.$").alias(name_alias)
@@ -69,7 +55,7 @@ def array_names_flat_raw():
     )
 
 
-@dp.table(name="ref_country_names_flat_validated")
+@dp.table(name="silver.ref_country_names_flat_validated")
 @dp.expect_all_or_drop(COUNTRY_RULES["ref_country_names_flat"])
 def array_names_flat_df():
     return dp.read_stream("array_names_flat_raw")
@@ -78,10 +64,10 @@ def array_names_flat_df():
 @dp.table(name="silver_audit.err_country_invalid_json")
 def invalid_json():
     return (
-        dp.read_stream(BRONZE_SOURCE)
+        dp.read_stream(COUNTRY_BRONZE_SOURCE)
         .withColumn("parsed", from_json(col("raw_json"), schemas.country_resource_schema))
         .filter(col("parsed").isNull())
-        .select("source_file", "bronze_ingested_at", "ingest_run_id", "raw_json")
+        .select(*COUTRY_META_FIELDS, "raw_json")
     )
 
 
@@ -96,12 +82,12 @@ def country_quarantine():
 @dp.expect_all_or_drop(COUNTRY_RULES["ref_dim_country"])
 def simple_dim_df():
     return dp.read_stream("exploded_entity").select(
-        "source_file", "bronze_ingested_at", "ingest_run_id", col(code_alias)
+        *COUTRY_META_FIELDS, col(code_alias)
     )
 
-dp.create_streaming_table("ref_dim_country")
+dp.create_streaming_table("silver.ref_dim_country")
 dp.create_auto_cdc_flow(
-    target = "ref_dim_country",
+    target = "silver.ref_dim_country",
     source = "simple_dim_df",
     keys = ["country_code"],
     sequence_by = col("bronze_ingested_at"),
@@ -109,9 +95,9 @@ dp.create_auto_cdc_flow(
 )
 
 
-dp.create_streaming_table("ref_country_names_flat")
+dp.create_streaming_table("silver.ref_country_names_flat")
 dp.create_auto_cdc_flow(
-    target = "ref_country_names_flat",
+    target = "silver.ref_country_names_flat",
     source = "ref_country_names_flat_validated",
     keys = ["country_code", "language_code"],
     sequence_by = col("bronze_ingested_at"),
