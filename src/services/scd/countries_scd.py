@@ -2,8 +2,7 @@ from pyspark.sql import SparkSession
 spark = SparkSession.getActiveSession()
 
 from pyspark import pipelines as dp
-from pyspark.sql.functions import col, explode, from_json
-from pyspark.sql.types import StructType, StructField, StringType, ArrayType
+from pyspark.sql.functions import col, explode, from_json, upper, trim, lower
 import src.services.parsing_schemas as schemas
 
 from src.services.scd.utils.rules import (
@@ -45,7 +44,7 @@ def exploded_entity():
         )
         .select(
             "*",
-            col(f"{entity_alias}.{code_field}").alias(code_alias)
+            upper(trim(col(f"{entity_alias}.{code_field}"))).alias(code_alias)
         )
     )
 
@@ -59,7 +58,7 @@ def array_names_flat_df():
             col("source_file"),
             col("bronze_ingested_at"),
             col("ingest_run_id"),
-            col(f"{entity_alias}.{code_field}").alias(code_alias),
+            col(code_alias),
             explode(col(f"{entity_alias}.Names.Name")).alias("name")
         )
     )
@@ -69,12 +68,11 @@ def array_names_flat_df():
             col("bronze_ingested_at"),
             col("ingest_run_id"),
             col(code_alias),
-            col("name.`@LanguageCode`").alias("language_code"),
+            upper(trim(col("name.`@LanguageCode`"))).alias("language_code"),
             col("name.`$`").alias(name_alias),
         )
     )
     return exploded_names
-    # return apply_validations(exploded_names, COUNTRY_RULES["ref_country_names_flat"])
 
 
 @dp.view
@@ -85,7 +83,7 @@ def simple_dim_df():
         col("source_file"),
         col("bronze_ingested_at"),
         col("ingest_run_id"),
-        col(f"{entity_alias}.{key_field}").alias(key_alias),
+        col(code_alias),
     ]
 
     if extra_fields:
@@ -96,13 +94,11 @@ def simple_dim_df():
 
     df = dp.read_stream("exploded_entity").select(*select_exprs)
     return df
-    # return apply_validations(df, COUNTRY_RULES["ref_dim_country"])
 
 
 dp.create_streaming_table("ref_dim_country")
 
-# create_auto_cdc_flow
-dp.apply_changes(
+dp.create_auto_cdc_flow(
     target = "ref_dim_country",
     source = "simple_dim_df",
     keys = ["country_code"],
@@ -113,7 +109,7 @@ dp.apply_changes(
 
 dp.create_streaming_table("ref_country_names_flat")
 
-dp.apply_changes(
+dp.create_auto_cdc_flow(
     target = "ref_country_names_flat",
     source = "array_names_flat_df",
     keys = ["country_code", "language_code"],
