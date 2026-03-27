@@ -9,3 +9,5 @@ except:
 
 from src.services.scd.references.countries_scd import *
 from src.services.scd.references.cities_scd import *
+from src.services.scd.references.airports_scd import *
+

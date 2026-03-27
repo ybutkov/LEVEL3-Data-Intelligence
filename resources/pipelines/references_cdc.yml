@@ -1,14 +1,14 @@
 resources:
   pipelines:
-    countries_cdc_silver:
-      name: countries_cdc_silver
+    references_cdc_silver:
+      name: references_cdc_silver
       catalog: lufthansa_level
       schema: silver
       serverless: true
       continuous: false
       libraries:
         - file:
-            path: ${workspace.file_path}/src/2_silver/reference/countries_cdc_job.py
+            path: ${workspace.file_path}/src/2_silver/reference/references_cdc_job.py
       configuration:
         root_path: ${workspace.file_path}
         catalog: lufthansa_level
