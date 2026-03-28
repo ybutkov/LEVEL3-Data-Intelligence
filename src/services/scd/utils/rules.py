@@ -64,10 +64,16 @@ AIRPORT_RULES = {
 AIRLINE_RULES = {
     "ref_dim_airline": {
         "airline_id_not_null": NOT_NULL("airline_id"),
-        "airline_id_len":      AIRLINE_LENGTH("airline_id")
+        "airline_id_len":      LENGTH("airline_id", 3),
+        "icao_code_not_null":      NOT_NULL("icao_code"),
+        # "airline_id_len":      AIRLINE_LENGTH("airline_id")
+        # "icao_code_len":      LENGTH("icao_code", 3),
     },
     "ref_airline_names_flat": {
-        "airline_id_len": AIRLINE_LENGTH("airline_id"),
+        "airline_id_not_null": NOT_NULL("airline_id"),
+        "airline_id_len": LENGTH("airline_id", 3),
+        "icao_code_not_null": NOT_NULL("icao_code"),
+        "lang_code_not_null":  NOT_NULL("language_code"),
         "lang_code_len":  LENGTH("language_code", 2),
         "name_not_empty": NOT_EMPTY("airline_name")
     }
