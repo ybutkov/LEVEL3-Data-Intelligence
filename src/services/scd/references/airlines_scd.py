@@ -125,7 +125,7 @@ def airline_names():
             col(code_alias),
             col("icao_code"),
             col("language_code"),
-            col(name_alias),
+            trim(col(name_alias)).alias(name_alias),
         )
     )
 
@@ -140,8 +140,7 @@ def airline_names_quarantine():
             col(code_alias),
             col("icao_code"),
             col("language_code"),
-            col(name_alias),    df = df.withColumn(
-
+            trim(col(name_alias)).alias(name_alias),
         )
     )
 

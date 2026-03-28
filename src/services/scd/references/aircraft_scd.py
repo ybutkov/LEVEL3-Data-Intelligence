@@ -122,7 +122,7 @@ def aircraft_names():
             *AIRCRAFT_META_FIELDS,
             col(code_alias),
             col("language_code"),
-            col(name_alias),
+            trim(col(name_alias)).alias(name_alias),
         )
     )
 
@@ -136,7 +136,7 @@ def aircraft_names_quarantine():
             *AIRCRAFT_META_FIELDS,
             col(code_alias),
             col("language_code"),
-            col(name_alias),
+            trim(col(name_alias)).alias(name_alias),
         )
     )
 

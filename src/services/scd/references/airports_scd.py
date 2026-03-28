@@ -137,7 +137,7 @@ def airport_names():
             *AIRPORT_META_FIELDS,
             col(code_alias),
             col("language_code"),
-            col(name_alias),
+            trim(col(name_alias)).alias(name_alias),
         )
     )
 
@@ -151,7 +151,7 @@ def airport_names_quarantine():
             *AIRPORT_META_FIELDS,
             col(code_alias),
             col("language_code"),
-            col(name_alias),
+            trim(col(name_alias)).alias(name_alias),
         )
     )
 

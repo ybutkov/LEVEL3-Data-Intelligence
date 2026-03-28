@@ -50,7 +50,7 @@ AIRPORT_RULES = {
         "airport_code_len": LENGTH("airport_code", 3),
         "city_code_len":    LENGTH("city_code", 3),
         "country_code_len": LENGTH("country_code", 2),
-        "location_type": EQUALS("location_type", "'Airport'"),
+        "location_type":    EQUALS("location_type", "'Airport'"),
         
         "lat_is_double":    IS_DOUBLE("latitude"),
         "lat_range":        LAT_RANGE("latitude"),
@@ -60,7 +60,7 @@ AIRPORT_RULES = {
     "ref_airport_names_flat": {
         "airport_code_len": LENGTH("airport_code", 3),
         "lang_code_len":    LENGTH("language_code", 2),
-        "name_not_empty":   NOT_EMPTY("airport_name")
+        "name_not_empty":   NOT_EMPTY("airport_name"),
     }
 }
 
@@ -68,46 +68,47 @@ AIRLINE_RULES = {
     "ref_dim_airline": {
         "airline_id_not_null": NOT_NULL("airline_id"),
         "airline_id_len":      LENGTH("airline_id", 3),
-        "icao_code_not_null":      NOT_NULL("icao_code"),
-        # "airline_id_len":      AIRLINE_LENGTH("airline_id")
-        # "icao_code_len":      LENGTH("icao_code", 3),
+        "icao_code_not_null": NOT_NULL("icao_code"),
+        "icao_code_len":      AIRLINE_LENGTH("icao_code"),
     },
     "ref_airline_names_flat": {
-        "airline_id_not_null": NOT_NULL("airline_id"),
-        "airline_id_len": LENGTH("airline_id", 3),
-        "icao_code_not_null": NOT_NULL("icao_code"),
-        "lang_code_not_null":  NOT_NULL("language_code"),
-        "lang_code_len":  LENGTH("language_code", 2),
-        "name_not_empty": NOT_EMPTY("airline_name")
+        "airline_id_not_null":  NOT_NULL("airline_id"),
+        "airline_id_len":       LENGTH("airline_id", 3),
+        "icao_code_not_null":   NOT_NULL("icao_code"),
+        "icao_code_len":        AIRLINE_LENGTH("icao_code"),
+        "lang_code_not_null":   NOT_NULL("language_code"),
+        "lang_code_len":        LENGTH("language_code", 2),
+        "name_not_empty":       NOT_EMPTY("airline_name"),
     }
 }
 
 AIRCRAFT_RULES = {
     "ref_dim_aircraft": {
-        "aircraft_code_not_null": NOT_NULL("aircraft_code"),
-        "aircraft_code_len":      LENGTH("aircraft_code", 3)
+        "aircraft_code_not_null":       NOT_NULL("aircraft_code"),
+        "aircraft_code_len":            LENGTH("aircraft_code", 3),
+        "airline_equip_code_not_null":  NOT_NULL("airline_equip_code"),
     },
     "ref_aircraft_names_flat": {
-        "aircraft_code_len": LENGTH("aircraft_code", 3),
-        "lang_code_len":     LENGTH("language_code", 2),
-        "name_not_empty":    NOT_EMPTY("aircraft_name")
+        "aircraft_code_len":            LENGTH("aircraft_code", 3),
+        "lang_code_len":                LENGTH("language_code", 2),
+        "name_not_empty":               NOT_EMPTY("aircraft_name"),
     }
 }
 
 OPERATIONAL_RULES = {
     "op_fact_flight_status": {
-        "marketing_airline_not_null": NOT_NULL("flight.MarketingCarrier.AirlineID"),
-        "marketing_flight_not_null": NOT_NULL("flight.MarketingCarrier.FlightNumber"),
-        "departure_airport_not_null": NOT_NULL("flight.Departure.AirportCode"),
-        "arrival_airport_not_null": NOT_NULL("flight.Arrival.AirportCode"),
+        "marketing_airline_not_null":   NOT_NULL("flight.MarketingCarrier.AirlineID"),
+        "marketing_flight_not_null":    NOT_NULL("flight.MarketingCarrier.FlightNumber"),
+        "departure_airport_not_null":   NOT_NULL("flight.Departure.AirportCode"),
+        "arrival_airport_not_null":     NOT_NULL("flight.Arrival.AirportCode"),
         "scheduled_departure_not_null": NOT_NULL("flight.Departure.ScheduledTimeUTC.DateTime"),
-        "flight_status_not_null": NOT_NULL("flight.FlightStatus.Code"),
+        "flight_status_not_null":       NOT_NULL("flight.FlightStatus.Code"),
     },
     "op_fact_flight_status_quarantine": {
-        "marketing_airline_not_null": NOT_NULL("flight.MarketingCarrier.AirlineID"),
-        "marketing_flight_not_null": NOT_NULL("flight.MarketingCarrier.FlightNumber"),
-        "departure_airport_not_null": NOT_NULL("flight.Departure.AirportCode"),
-        "arrival_airport_not_null": NOT_NULL("flight.Arrival.AirportCode"),
+        "marketing_airline_not_null":   NOT_NULL("flight.MarketingCarrier.AirlineID"),
+        "marketing_flight_not_null":    NOT_NULL("flight.MarketingCarrier.FlightNumber"),
+        "departure_airport_not_null":   NOT_NULL("flight.Departure.AirportCode"),
+        "arrival_airport_not_null":     NOT_NULL("flight.Arrival.AirportCode"),
     }
 }
 

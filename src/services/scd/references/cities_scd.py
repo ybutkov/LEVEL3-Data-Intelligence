@@ -128,7 +128,7 @@ def city_names():
             *CITY_META_FIELDS,
             col(code_alias),
             col("language_code"),
-            col(name_alias),
+            trim(col(name_alias)).alias(name_alias),
         )
     )
 
@@ -142,7 +142,7 @@ def city_names_quarantine():
             *CITY_META_FIELDS,
             col(code_alias),
             col("language_code"),
-            col(name_alias),
+            trim(col(name_alias)).alias(name_alias),
         )
     )
 

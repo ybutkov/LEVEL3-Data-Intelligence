@@ -119,7 +119,7 @@ def country_names():
             *COUNTRY_META_FIELDS,
             col(code_alias),
             col("language_code"),
-            col(name_alias),
+            trim(col(name_alias)).alias(name_alias),
         )
     )
 
@@ -133,7 +133,7 @@ def country_names_quarantine():
             *COUNTRY_META_FIELDS,
             col(code_alias),
             col("language_code"),
-            col(name_alias),
+            trim(col(name_alias)).alias(name_alias),
         )
     )
 
