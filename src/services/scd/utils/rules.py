@@ -96,15 +96,14 @@ AIRCRAFT_RULES = {
 }
 
 OPERATIONAL_RULES = {
-    "op_fact_flight_status": {
+    "fact_flight_status": {
         "marketing_airline_not_null":   NOT_NULL("flight.MarketingCarrier.AirlineID"),
         "marketing_flight_not_null":    NOT_NULL("flight.MarketingCarrier.FlightNumber"),
         "departure_airport_not_null":   NOT_NULL("flight.Departure.AirportCode"),
         "arrival_airport_not_null":     NOT_NULL("flight.Arrival.AirportCode"),
-        "scheduled_departure_not_null": NOT_NULL("flight.Departure.ScheduledTimeUTC.DateTime"),
         "flight_status_not_null":       NOT_NULL("flight.FlightStatus.Code"),
     },
-    "op_fact_flight_status_quarantine": {
+    "fact_flight_identity": {
         "marketing_airline_not_null":   NOT_NULL("flight.MarketingCarrier.AirlineID"),
         "marketing_flight_not_null":    NOT_NULL("flight.MarketingCarrier.FlightNumber"),
         "departure_airport_not_null":   NOT_NULL("flight.Departure.AirportCode"),
@@ -121,7 +120,6 @@ REFERENCE_RULES = {
 }
 
 def apply_validations(df, checks):
-    # Accept either a dict of name->condition or a list of (name, condition)
     if isinstance(checks, dict):
         items = checks.items()
     else:
