@@ -2,9 +2,8 @@ from pyspark.sql import SparkSession
 spark = SparkSession.getActiveSession()
 
 from pyspark import pipelines as dp
-from pyspark.sql.functions import col, explode, from_json, upper, trim, lower, expr
+from pyspark.sql.functions import col, explode, from_json, upper, trim, expr
 import src.services.parsing_schemas as schemas
-
 from src.services.scd.utils.rules import AIRPORT_RULES
 
 AIRPORT_BRONZE_SOURCE = "lufthansa_level.bronze.airports_raw"
@@ -49,7 +48,8 @@ def exploded_airport_entity():
             col(f"{entity_alias}.Position.Coordinate.Latitude").alias("latitude"),
             col(f"{entity_alias}.Position.Coordinate.Longitude").alias("longitude"),
             col(f"{entity_alias}.TimeZoneId").alias("time_zone_id"),
-            col(f"{entity_alias}.UtcOffset").alias("utc_offset")
+            col(f"{entity_alias}.UtcOffset").alias("utc_offset"),
+            col(f"{entity_alias}.LocationType").alias("location_type")
         )
     )
 
@@ -73,10 +73,10 @@ def dim_airport_df():
             col(code_alias),
             col("city_code"),
             col("country_code"),
-            col("latitude"),
-            col("longitude"),
+            expr("st_point(CAST(longitude AS DOUBLE), CAST(latitude AS DOUBLE))").alias("coordinates"),
             col("time_zone_id"),
             col("utc_offset"),
+            col("location_type"),
         )
     )
 
@@ -91,25 +91,33 @@ def dim_airport_quarantine():
             col(code_alias),
             col("city_code"),
             col("country_code"),
-            col("latitude"),
-            col("longitude"),
+            expr("st_point(CAST(longitude AS DOUBLE), CAST(latitude AS DOUBLE))").alias("coordinates"),
             col("time_zone_id"),
             col("utc_offset"),
+            col("location_type"),
         )
     )
 
 
 @dp.view
 def airport_names_flat_checked():
-    df = dp.read_stream("dim_airport_rules_checked").filter("is_dim_quarantined=false")
+    df = dp.read_stream("exploded_airport_entity")
+    dim_rules = AIRPORT_RULES["ref_dim_airport"]
+    dim_combined = " AND ".join([f"({cond})" for cond in dim_rules.values()])
+    
+    df = df.filter(dim_combined)
+    
     rules = AIRPORT_RULES["ref_airport_names_flat"]
     combined_condition = " AND ".join([f"({cond})" for cond in rules.values()])
     quarantine_name_rules = "NOT({0})".format(combined_condition)
     
-    df = df.select(
+    df = df.withColumn(
+        "names_array",
+        expr(f"coalesce({entity_alias}.Names.Name, array())")
+    ).select(
         *[col(f) for f in AIRPORT_META_FIELDS],
         col(code_alias),
-        explode(col(f"{entity_alias}.Names.Name")).alias("n")
+        explode(col("names_array")).alias("n")
     ).select(
         *[col(f) for f in AIRPORT_META_FIELDS],
         col(code_alias),

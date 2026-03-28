@@ -4,7 +4,6 @@ spark = SparkSession.getActiveSession()
 from pyspark import pipelines as dp
 from pyspark.sql.functions import col, explode, from_json, upper, trim, lower, expr
 import src.services.parsing_schemas as schemas
-
 from src.services.scd.utils.rules import COUNTRY_RULES
 
 
@@ -84,15 +83,23 @@ def dim_country_quarantine():
 
 @dp.view
 def country_names_flat_checked():
-    df = dp.read_stream("dim_country_rules_checked").filter("is_dim_quarantined=false")
+    df = dp.read_stream("exploded_country_entity")
+    dim_rules = COUNTRY_RULES["ref_dim_country"]
+    dim_combined = " AND ".join([f"({cond})" for cond in dim_rules.values()])
+    
+    df = df.filter(dim_combined)
+    
     rules = COUNTRY_RULES["ref_country_names_flat"]
     combined_condition = " AND ".join([f"({cond})" for cond in rules.values()])
     quarantine_name_rules = "NOT({0})".format(combined_condition)
     
-    df = df.select(
+    df = df.withColumn(
+        "names_array",
+        expr(f"coalesce({entity_alias}.Names.Name, array())")
+    ).select(
         *[col(f) for f in COUNTRY_META_FIELDS],
         col(code_alias),
-        explode(col(f"{entity_alias}.Names.Name")).alias("n")
+        explode(col("names_array")).alias("n")
     ).select(
         *[col(f) for f in COUNTRY_META_FIELDS],
         col(code_alias),

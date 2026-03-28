@@ -4,7 +4,6 @@ spark = SparkSession.getActiveSession()
 from pyspark import pipelines as dp
 from pyspark.sql.functions import col, explode, from_json, upper, trim, lower, lit, expr
 import src.services.parsing_schemas as schemas
-
 from src.services.scd.utils.rules import AIRLINE_RULES
 
 
@@ -87,17 +86,30 @@ def dim_airline_quarantine():
 
 @dp.view
 def airline_names_flat_checked():
-    df = dp.read_stream("dim_airline_rules_checked").filter("is_dim_quarantined=false")
+    df = dp.read_stream("exploded_airline_entity")
+    dim_rules = AIRLINE_RULES["ref_dim_airline"]
+    dim_combined = " AND ".join([f"({cond})" for cond in dim_rules.values()])
+    
+    df = df.filter(dim_combined)
+    
     rules = AIRLINE_RULES["ref_airline_names_flat"]
     combined_condition = " AND ".join([f"({cond})" for cond in rules.values()])
     quarantine_name_rules = "NOT({0})".format(combined_condition)
     
-    df = df.select(
+    df = df.withColumn(
+        "names_array",
+        expr(f"coalesce({entity_alias}.Names.Name, array())")
+    ).select(
         *[col(f) for f in AIRLINE_META_FIELDS],
         col(code_alias),
         col("icao_code"),
-        upper(trim(col(f"{entity_alias}.Names.Name.`@LanguageCode`"))).alias("language_code"),
-        col(f"{entity_alias}.Names.Name.$").alias(name_alias),
+        explode(col("names_array")).alias("n")
+    ).select(
+        *[col(f) for f in AIRLINE_META_FIELDS],
+        col(code_alias),
+        col("icao_code"),
+        upper(trim(col("n.`@LanguageCode`"))).alias("language_code"),
+        col("n.$").alias(name_alias),
     )
     
     return df.withColumn("is_names_quarantined", expr(quarantine_name_rules))
@@ -128,7 +140,8 @@ def airline_names_quarantine():
             col(code_alias),
             col("icao_code"),
             col("language_code"),
-            col(name_alias),
+            col(name_alias),    df = df.withColumn(
+
         )
     )
 

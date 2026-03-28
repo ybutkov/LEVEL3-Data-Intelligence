@@ -5,6 +5,7 @@ from pyspark.sql.functions import length, explode, from_json
 def NOT_NULL(c): return f"{c} IS NOT NULL"
 def NOT_EMPTY(c): return f"length(trim({c})) > 0"
 def LENGTH(c, n): return f"length({c}) = {n}"
+def EQUALS(c, v): return f"({c}) = {v}"
 def IS_UPPER(c): return f"{c} = upper({c})"
 def ONLY_LETTERS(c): return f"{c} REGEXP '^[A-Z]+$'"
 def IS_DOUBLE(c): return f"CAST({c} AS DOUBLE) IS NOT NULL"
@@ -49,6 +50,8 @@ AIRPORT_RULES = {
         "airport_code_len": LENGTH("airport_code", 3),
         "city_code_len":    LENGTH("city_code", 3),
         "country_code_len": LENGTH("country_code", 2),
+        "location_type": EQUALS("location_type", "'Airport'"),
+        
         "lat_is_double":    IS_DOUBLE("latitude"),
         "lat_range":        LAT_RANGE("latitude"),
         "lon_is_double":    IS_DOUBLE("longitude"),
@@ -88,6 +91,23 @@ AIRCRAFT_RULES = {
         "aircraft_code_len": LENGTH("aircraft_code", 3),
         "lang_code_len":     LENGTH("language_code", 2),
         "name_not_empty":    NOT_EMPTY("aircraft_name")
+    }
+}
+
+OPERATIONAL_RULES = {
+    "op_fact_flight_status": {
+        "marketing_airline_not_null": NOT_NULL("flight.MarketingCarrier.AirlineID"),
+        "marketing_flight_not_null": NOT_NULL("flight.MarketingCarrier.FlightNumber"),
+        "departure_airport_not_null": NOT_NULL("flight.Departure.AirportCode"),
+        "arrival_airport_not_null": NOT_NULL("flight.Arrival.AirportCode"),
+        "scheduled_departure_not_null": NOT_NULL("flight.Departure.ScheduledTimeUTC.DateTime"),
+        "flight_status_not_null": NOT_NULL("flight.FlightStatus.Code"),
+    },
+    "op_fact_flight_status_quarantine": {
+        "marketing_airline_not_null": NOT_NULL("flight.MarketingCarrier.AirlineID"),
+        "marketing_flight_not_null": NOT_NULL("flight.MarketingCarrier.FlightNumber"),
+        "departure_airport_not_null": NOT_NULL("flight.Departure.AirportCode"),
+        "arrival_airport_not_null": NOT_NULL("flight.Arrival.AirportCode"),
     }
 }
 
