@@ -2,11 +2,11 @@ from pyspark.sql.functions import col, explode
 
 
 def explode_entity(valid_df, entity_path: str, entity_alias: str):
+    meta_data_cols = ["source_file", "bronze_ingested_at", "ingest_run_id"]
     return (
         valid_df
         .select(
-            "source_file",
-            "bronze_ingested_at",
+            *meta_data_cols,
             explode(col(entity_path)).alias(entity_alias)
         )
     )
@@ -24,6 +24,7 @@ def build_array_names_flat_df(
         .select(
             col("source_file"),
             col("bronze_ingested_at"),
+            col("ingest_run_id"),
             col(f"{entity_alias}.{code_field}").alias(code_alias),
             explode(col(f"{entity_alias}.Names.Name")).alias("name")
         )
@@ -49,6 +50,7 @@ def build_single_names_flat_df(
         .select(
             col("source_file"),
             col("bronze_ingested_at"),
+            col("ingest_run_id"),
             col(f"{entity_alias}.{code_field}").alias(code_alias),
             col(f"{entity_alias}.Names.Name.@LanguageCode").alias("language_code"),
             col(f"{entity_alias}.Names.Name.$").alias(name_alias),
@@ -66,6 +68,7 @@ def build_simple_dim_df(
     select_exprs = [
         col("source_file"),
         col("bronze_ingested_at"),
+        col("ingest_run_id"),
         col(f"{entity_alias}.{key_field}").alias(key_alias),
     ]
 

@@ -1,0 +1,15 @@
+resources:
+  pipelines:
+    op_cdc_silver:
+      name: op_cdc_silver
+      catalog: lufthansa_level
+      schema: silver
+      serverless: true
+      continuous: false
+      libraries:
+        - file:
+            path: ${workspace.file_path}/src/services/scd/operations/flight_status_scd.py
+      configuration:
+        root_path: ${workspace.file_path}
+        catalog: lufthansa_level
+        schema: silver

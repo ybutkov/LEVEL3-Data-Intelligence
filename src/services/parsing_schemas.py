@@ -87,10 +87,14 @@ single_name_schema = StructType([
         "Name", name_schema, True)
 ])
 
+names_schema = StructType([
+    StructField("Name", ArrayType(name_schema), True)
+])
+
 airline_schema = StructType([
     StructField("AirlineID", StringType(), True),
     StructField("AirlineID_ICAO", StringType(), True),
-    StructField("Names", single_name_schema, True),
+    StructField("Names", names_schema, True),
 ])
 
 
@@ -115,7 +119,7 @@ airline_resource_schema = StructType([
 
 aircraft_schema = StructType([
     StructField("AircraftCode", StringType(), True),
-    StructField("Names", single_name_schema, True),
+    StructField("Names", names_schema, True),
     StructField("AirlineEquipCode", StringType(), True),
 ])
 
