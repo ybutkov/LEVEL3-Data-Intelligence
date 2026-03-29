@@ -1,7 +1,7 @@
 resources:
   jobs:
-    temp_gold:
-      name: operations_gold
+    sep_temp_gold:
+      name: "sep oper_gold"
       tasks:
         - task_key: operations_gold_task
           spark_python_task:

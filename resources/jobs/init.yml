@@ -1,7 +1,7 @@
 resources:
   jobs:
     lufthansa_init_setup:
-      name: Lufthansa Initialization
+      name: "Lufthansa Initialization"
       description: "One-time setup: catalog, schemas, reference dimensions"
       tasks:
         - task_key: setup_catalog
