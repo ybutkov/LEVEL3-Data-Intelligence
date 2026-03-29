@@ -66,7 +66,9 @@ def fetch_data(url, query_params=None, max_retries=5, timeout=20):
                 params=query_params,
                 timeout=timeout,
             )
+            logger.debug(f"Got response with status {response.status_code}")
             status_code = response.status_code
+            logger.debug(f"Response status code: {status_code}, retryable={status_code in RETRYABLE_STATUS_CODES}, non_retryable={status_code in NON_RETRYABLE_STATUS_CODES}")
             if status_code in RETRYABLE_STATUS_CODES:
                 last_error = RuntimeError(f"Retryable status code {status_code}")
                 if attempt == max_retries:
@@ -83,9 +85,10 @@ def fetch_data(url, query_params=None, max_retries=5, timeout=20):
                 continue
             
             if status_code in NON_RETRYABLE_STATUS_CODES:
-                logger.error(f"Non-retryable status code {status_code}")
+                logger.debug(f"Non-retryable status code {status_code}, calling raise_for_status()")
                 response.raise_for_status()
 
+            logger.debug(f"No error for status {status_code}, returning response")
             response.raise_for_status()
             return response
 
@@ -109,6 +112,7 @@ def fetch_data(url, query_params=None, max_retries=5, timeout=20):
         
         except requests.HTTPError as e:
             status_code = e.response.status_code if e.response is not None else None
+            logger.debug(f"HTTPError {status_code} caught, retryable={status_code in RETRYABLE_STATUS_CODES}")
             if status_code in RETRYABLE_STATUS_CODES:
                 last_error = RuntimeError(f"Retryable HTTP error {status_code}")
                 if attempt == max_retries:
@@ -123,8 +127,13 @@ def fetch_data(url, query_params=None, max_retries=5, timeout=20):
                 time.sleep(sleep_seconds)
                 delay *= 2.0
             else:
-                logger.error(f"Non-retryable HTTP error {status_code}")
-                raise e
+                logger.debug(f"Non-retryable HTTP error {status_code}, raising immediately")
+                # Re-raise the original HTTP error
+                raise
+    
+    if last_error:
+        raise last_error
+    raise RuntimeError(f"Failed to fetch {url} after {max_retries} attempts")
 
 
 def get_split_and_save_request(
@@ -150,6 +159,7 @@ def get_split_and_save_request(
             page_query_params.update({"limit": limit, "offset": offset})
         else:
             logger.info(f"Request: {endpoint.value}")
+            pass
         
         url = endpoint_config.build_endpoint_path(path_params)
         response = fetch_data(
@@ -172,36 +182,72 @@ def get_split_and_save_request(
         return data, failed_offsets
 
     except Exception as e:
-        # TODO: Check before paginable or not and type of error
-        logger.exception(f"Request failed endpoint={endpoint.value} offset={offset} limit={limit} error: {e}")
+        logger.error(
+            f"endpoint={endpoint.value} offset={offset} limit={limit} "
+            f"error={type(e).__name__}: {e}"
+        )
 
         if isinstance(e, requests.HTTPError):
             status = e.response.status_code if getattr(e, "response", None) is not None else None
             if status in {HTTPStatus.UNAUTHORIZED, HTTPStatus.FORBIDDEN}:
                 raise e
 
-            if status == HTTPStatus.NOT_FOUND and getattr(endpoint_config, "stop_on_404", False):
-                logger.error(f"Endpoint configured to stop on 404: {endpoint.value}")
-                raise e
+            if status in {HTTPStatus.BAD_REQUEST, HTTPStatus.NOT_FOUND}:
+                if status == HTTPStatus.NOT_FOUND:
+                    stop_on_404 = getattr(endpoint_config, "stop_on_404", False)
+                    is_paginable = getattr(endpoint_config, "paginable", False)
+                    
+                    if stop_on_404:
+                        logger.debug(f"Endpoint configured to stop on 404: {endpoint.value} - re-raising 404 error")
+                        raise
+                    elif is_paginable and limit and limit > 1:
+                        logger.debug(
+                            f"404 on paginable endpoint {endpoint.value} offset={offset} limit={limit}; "
+                            "attempting to split range"
+                        )
+                        pass
+                    else:
+                        logger.debug(f"404 on non-paginable endpoint {endpoint.value}: marking offset as failed")
+                        if offset is not None:
+                            failed_offsets.append(offset)
+                        return data, failed_offsets
+                else:
+                    logger.debug(f"HTTP 400 Bad Request for endpoint={endpoint.value}: request parameters are invalid")
+                    raise e
 
-            logger.warning(
-                f"HTTP error {status} for endpoint={endpoint.value} offset={offset}; "
-                "marking offset or splitting range"
-            )
+            else:
+                # Other HTTP errors (500, 503, etc.) - attempt split/retry
+                logger.debug(
+                    f"HTTP error {status} for endpoint={endpoint.value} offset={offset}; "
+                    "attempting to split range if paginable"
+                )
+                pass
+
+        elif isinstance(e, ValueError):
+            logger.debug(f"Parsing/validation error for endpoint={endpoint.value} offset={offset}: {e}")
             if not limit or limit <= 1:
                 if offset is not None:
                     failed_offsets.append(offset)
                 return data, failed_offsets
 
-        if isinstance(e, ValueError):
-            logger.warning(f"Parsing/validation error for endpoint={endpoint.value} offset={offset}: {e}")
+        else:
+            # Catch any other exceptions type
+            logger.debug(f"Unexpected exception type {type(e).__name__} for endpoint={endpoint.value}: {e}")
             if not limit or limit <= 1:
                 if offset is not None:
                     failed_offsets.append(offset)
                 return data, failed_offsets
+
+        if not limit or limit <= 1:
+            logger.debug(f"Cannot split further: limit={limit}. Marking as failed.")
+            if offset is not None:
+                failed_offsets.append(offset)
+            return data, failed_offsets
 
         left_part = limit // 2
         right_part = limit - left_part
+
+        logger.debug(f"Splitting range: offset={offset} limit={limit} → left={left_part}, right={right_part}")
 
         _, failed_offsets = get_split_and_save_request(
             endpoint=endpoint,
@@ -277,4 +323,3 @@ def get_and_save_all_pages(
                     f"Endpoint: {endpoint.value} - marking for retry"
                 )
             break
-    

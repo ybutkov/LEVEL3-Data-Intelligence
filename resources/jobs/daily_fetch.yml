@@ -1,11 +1,11 @@
 resources:
   jobs:
-    daily_fetch_operations:
-      name: daily_fetch_operations
+    sep_daily_fetch_operations:
+      name: "sep daily_fetch_operations"
       tasks:
         - task_key: daily_fetch_task
           spark_python_task:
-            python_file: ${workspace.file_path}/src/1_bronze/daily_fetch.py
+            python_file: ${workspace.file_path}/src/1_bronze/daily_ingestion_job.py
             parameters:
               - --root_path
               - "${workspace.file_path}"

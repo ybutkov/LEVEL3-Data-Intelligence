@@ -30,11 +30,11 @@ def ingest_references_monthly():
     logger.info("Start monthly references ingestion job")
     init_app()
     reference_endpoints = [
-        # EndpointKeys.AIRPORTS,
-        # EndpointKeys.CITIES,
+        EndpointKeys.AIRPORTS,
+        EndpointKeys.CITIES,
         EndpointKeys.COUNTRIES,
-        # EndpointKeys.AIRLINES,
-        # EndpointKeys.AIRCRAFT,
+        EndpointKeys.AIRLINES,
+        EndpointKeys.AIRCRAFT,
     ]
 
     for endpoint in reference_endpoints:

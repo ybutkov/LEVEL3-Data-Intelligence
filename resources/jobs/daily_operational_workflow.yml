@@ -1,7 +1,7 @@
 resources:
   jobs:
-    daily_operational_workflow:
-      name: daily_operational_workflow
+    lufthansa_daily_workflow:
+      name: "Lufthansa Daily Data Flow"
 
       schedule:
         quartz_cron_expression: "0 0 5 * * ?"
@@ -9,43 +9,47 @@ resources:
         pause_status: UNPAUSED
 
       tasks:
-        # 1. FETCH (API → landing_area)
+        # 1. FETCH OPERATIONS (API → landing_area)
         - task_key: fetch_operational_data
           spark_python_task:
-            python_file: ${workspace.file_path}/src/1_bronze/daily_fetch.py
+            python_file: ${workspace.file_path}/src/1_bronze/daily_ingestion_job.py
             parameters:
               - --root_path
               - "${workspace.file_path}"
           environment_key: default
 
-        # 2. BRONZE (Auto Loader pipeline)
+        # 2. BRONZE - Auto Loader (operations + references from landing_area)
         - task_key: load_to_bronze
           depends_on:
             - task_key: fetch_operational_data
           pipeline_task:
             pipeline_id: ${resources.pipelines.ingestion_pipeline_autoload.id}
 
-        # 3. SILVER (parse + validate + deduplicate)
-        - task_key: build_silver_operational
+        # 3. SILVER - CDC
+        - task_key: build_silver_references
           depends_on:
             - task_key: load_to_bronze
-          spark_python_task:
-            python_file: ${workspace.file_path}/src/2_silver/operations/operations_silver_job.py
-            parameters:
-              - --root_path
-              - "${workspace.file_path}"
-          environment_key: default
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.references_cdc_silver.id}
 
-        # 4. GOLD (still empty)
-        - task_key: build_gold_operational
+        - task_key: build_silver_operational
           depends_on:
-            - task_key: build_silver_operational
-          spark_python_task:
-            python_file: ${workspace.file_path}/src/3_gold/operations/operations_gold_job.py
-            parameters:
-              - --root_path
-              - "${workspace.file_path}"
-          environment_key: default
+            - task_key: build_silver_references
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.op_cdc_silver.id}
+
+
+        # 4. GOLD - parallel ???
+        # - task_key: build_gold_operational
+        #   depends_on:
+        #     - task_key: build_silver_operational
+        #     - task_key: build_silver_references
+        #   spark_python_task:
+        #     python_file: ${workspace.file_path}/src/3_gold/operations/operations_gold_job.py
+        #     parameters:
+        #       - --root_path
+        #       - "${workspace.file_path}"
+        #   environment_key: default
 
       queue:
         enabled: true

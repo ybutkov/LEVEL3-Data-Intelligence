@@ -32,3 +32,9 @@ logger.info("✓ Schema: lufthansa_level.silver_audit")
 
 spark.sql("CREATE SCHEMA IF NOT EXISTS lufthansa_level.gold")
 logger.info("✓ Schema: lufthansa_level.gold")
+
+spark.sql("CREATE VOLUME IF NOT EXISTS lufthansa_level.bronze.landing_area")
+logger.info("✓ Volume: lufthansa_level.bronze.landing_area")
+
+spark.sql("CREATE VOLUME IF NOT EXISTS lufthansa_level.bronze.autoloader_metadata")
+logger.info("✓ Volume: lufthansa_level.bronze.autoloader_metadata")
