@@ -8,9 +8,8 @@ resources:
       continuous: false
       libraries:
         - file:
-            path: ${workspace.file_path}/src/2_silver/operations/operations_cdc_job.py
+            path: ${workspace.file_path}/src/services/scd/operations/flight_status_scd.py
       configuration:
         root_path: ${workspace.file_path}
         catalog: lufthansa_level
         schema: silver
-
