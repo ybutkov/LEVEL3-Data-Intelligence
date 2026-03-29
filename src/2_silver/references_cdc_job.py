@@ -13,4 +13,3 @@ from src.services.scd.references.cities_scd import *
 from src.services.scd.references.airports_scd import *
 from src.services.scd.references.airlines_scd import *
 from src.services.scd.references.aircraft_scd import *
-
