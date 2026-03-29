@@ -19,6 +19,7 @@ APPEND_TABLES = {
 }
 
 
+
 def run_parser(
     spark,
     cfg,
