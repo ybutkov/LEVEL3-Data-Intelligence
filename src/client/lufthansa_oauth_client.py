@@ -61,7 +61,9 @@ class LufthansaOAuthClient(BaseHttpClient):
                 self._fetch_token()
                 headers["Authorization"] = f"Bearer {self._access_token}"
                 return super().get(path, params=params, headers=headers, timeout=timeout)
-        raise
+            else:
+                # Re-raise for non-401 errors
+                raise
     
     # TODO: implement post with token
     def post(self, path, params=None, json=None, headers=None, timeout=None):
