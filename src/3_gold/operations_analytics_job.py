@@ -21,24 +21,6 @@ def build_table_name(cfg, schema_name: str, table_name: str) -> str:
     return f"{cfg.storage.catalog}.{schema_name}.{table_name}"
 
 
-def pick_name_by_lang(df, key_col: str, name_col: str, lang: str = "EN"):
-    ranked = (
-        df
-        .withColumn(
-            "rn",
-            F.row_number().over(
-                Window.partitionBy(key_col).orderBy(
-                    F.when(F.col("language_code") == lang, F.lit(1)).otherwise(F.lit(2)),
-                    F.col(name_col).asc_nulls_last(),
-                )
-            ),
-        )
-        .filter(F.col("rn") == 1)
-        .drop("rn")
-    )
-    return ranked
-
-
 def run_operations_analytics(spark, cfg):
     logger.info("Start operations analytics gold job")
     
@@ -150,32 +132,29 @@ def run_operations_analytics(spark, cfg):
         .withColumnRenamed("airport_country_code", "arrival_country_code")
         .drop(F.col("arr_airport_dim.airport_code"))
 
-        .withColumn("fact_flight_status_code", F.col("flight_status_code"))
         .join(
             F.broadcast(flight_status_dim.alias("fs_dim")),
-            F.col("fact_flight_status_code") == F.col("fs_dim.flight_status_code"),
+            F.col("flight_status_code") == F.col("fs_dim.flight_status_code"),
             "left",
         )
         .withColumn("flight_status_description", F.col("fs_dim.flight_status_description"))
-        .drop("fact_flight_status_code", F.col("fs_dim.flight_status_code"), F.col("fs_dim.flight_status_description"))
+        .drop(F.col("fs_dim.flight_status_code"), F.col("fs_dim.flight_status_description"))
 
-        .withColumn("fact_departure_time_status_code", F.col("departure_time_status_code"))
         .join(
             F.broadcast(time_status_dim_dept),
-            F.col("fact_departure_time_status_code") == F.col("dept_time_code"),
+            F.col("departure_time_status_code") == F.col("dept_time_code"),
             "left",
         )
         .withColumn("departure_time_status_description", F.col("dept_time_description"))
-        .drop("fact_departure_time_status_code", "dept_time_code", "dept_time_description")
+        .drop("dept_time_code", "dept_time_description")
 
-        .withColumn("fact_arrival_time_status_code", F.col("arrival_time_status_code"))
         .join(
             F.broadcast(time_status_dim_arr),
-            F.col("fact_arrival_time_status_code") == F.col("arr_time_code"),
+            F.col("arrival_time_status_code") == F.col("arr_time_code"),
             "left",
         )
         .withColumn("arrival_time_status_description", F.col("arr_time_description"))
-        .drop("fact_arrival_time_status_code", "arr_time_code", "arr_time_description")
+        .drop("arr_time_code", "arr_time_description")
         
         .withColumn("language_code", F.lit("EN"))
     )
@@ -240,14 +219,15 @@ def run_operations_analytics(spark, cfg):
     
     aircraft_util_df = (
         flight_metrics_df
+        .filter(F.col("aircraft_code").isNotNull())
         .groupBy("aircraft_code")
         .agg(
             F.count("*").alias("total_flights"),
             F.sum("is_completed").alias("completed_flights"),
             F.sum("is_cancelled").alias("cancelled_flights"),
             F.round(F.avg(F.when(F.col("is_completed") == 1, F.col("flight_duration_min"))), 2).alias("avg_flight_duration_min"),
-            F.round(F.avg(F.when(F.col("is_completed") == 1, F.col("departure_delay_min"))), 2).alias("avg_departure_delay_min"),
-            F.sum(F.when(F.col("is_delayed") == 1, 1)).alias("delayed_flights_count"),
+            F.sum(F.when((F.col("is_delayed") == 1) & (F.col("is_completed") == 1), F.col("departure_delay_min"))).alias("total_departure_delay_minutes"),
+            F.sum(F.when((F.col("is_delayed") == 1) & (F.col("is_completed") == 1), 1)).alias("delayed_flights_count"),
         )
         .withColumn(
             "utilization_rate_pct",
@@ -260,6 +240,14 @@ def run_operations_analytics(spark, cfg):
                 F.round(F.col("delayed_flights_count") * 100.0 / F.col("completed_flights"), 2)
             )
         )
+        .withColumn(
+            "avg_departure_delay_min",
+            F.when(
+                F.col("delayed_flights_count") > 0,
+                F.round(F.col("total_departure_delay_minutes") / F.col("delayed_flights_count"), 2)
+            )
+        )
+        .drop("total_departure_delay_minutes")
     )
 
     aircraft_util_df.write.mode("overwrite").option("mergeSchema", "true").saveAsTable(gold_aircraft_utilization)
@@ -269,11 +257,12 @@ def run_operations_analytics(spark, cfg):
     
     dept_traffic_df = (
         flight_metrics_df
+        .filter((F.col("departure_airport_code").isNotNull()) & (F.col("departure_country_code").isNotNull()))
         .groupBy("departure_airport_code", "departure_country_code")
         .agg(
             F.count("*").alias("total_departures"),
             F.sum("is_completed").alias("completed_departures"),
-            F.sum("is_delayed").alias("delayed_departures"),
+            F.sum(F.when((F.col("is_delayed") == 1) & (F.col("is_completed") == 1), 1)).alias("delayed_departures"),
             F.sum(F.when(F.col("is_completed") == 1, F.col("departure_delay_min"))).alias("total_departure_delay_minutes"),
         )
         .select(
@@ -288,8 +277,8 @@ def run_operations_analytics(spark, cfg):
         .withColumn(
             "avg_delay_min",
             F.when(
-                F.col("completed_departures") > 0,
-                F.round(F.col("total_departure_delay_minutes") / F.col("completed_departures"), 2)
+                F.col("delayed_departures") > 0,
+                F.round(F.col("total_departure_delay_minutes") / F.col("delayed_departures"), 2)
             )
         )
         .withColumn(
@@ -304,11 +293,12 @@ def run_operations_analytics(spark, cfg):
 
     arr_traffic_df = (
         flight_metrics_df
+        .filter((F.col("arrival_airport_code").isNotNull()) & (F.col("arrival_country_code").isNotNull()))
         .groupBy("arrival_airport_code", "arrival_country_code")
         .agg(
             F.count("*").alias("total_arrivals"),
             F.sum("is_completed").alias("completed_arrivals"),
-            F.sum("is_delayed").alias("delayed_arrivals"),
+            F.sum(F.when((F.col("is_delayed") == 1) & (F.col("is_completed") == 1), 1)).alias("delayed_arrivals"),
             F.sum(F.when(F.col("is_completed") == 1, F.col("arrival_delay_min"))).alias("total_arrival_delay_minutes"),
         )
         .select(
@@ -323,8 +313,8 @@ def run_operations_analytics(spark, cfg):
         .withColumn(
             "avg_delay_min",
             F.when(
-                F.col("completed_arrivals") > 0,
-                F.round(F.col("total_arrival_delay_minutes") / F.col("completed_arrivals"), 2)
+                F.col("delayed_arrivals") > 0,
+                F.round(F.col("total_arrival_delay_minutes") / F.col("delayed_arrivals"), 2)
             )
         )
         .withColumn(
@@ -339,6 +329,27 @@ def run_operations_analytics(spark, cfg):
 
     airport_traffic_df = dept_traffic_df.union(arr_traffic_df)
 
+    # Aggregate airport-level totals across departure and arrival movements and join back
+    airport_totals_df = (
+        airport_traffic_df
+        .groupBy("airport_code", "country_code")
+        .agg(
+            F.sum("total_departures").alias("total_movements"),
+            F.sum("completed_departures").alias("total_completed"),
+            F.sum("delayed_departures").alias("total_delayed"),
+        )
+    )
+
+    # Join totals back to movement-type details
+    airport_traffic_df = (
+        airport_traffic_df
+        .join(
+            airport_totals_df,
+            on=["airport_code", "country_code"],
+            how="left"
+        )
+    )
+
     airport_traffic_df.write.mode("overwrite").option("mergeSchema", "true").saveAsTable(gold_airport_traffic)
     logger.info(f"Saved airport traffic table: {gold_airport_traffic}")
 
@@ -346,6 +357,7 @@ def run_operations_analytics(spark, cfg):
     
     airline_perf_df = (
         flight_metrics_df
+        .filter((F.col("marketing_airline_id").isNotNull()) & (F.col("operating_airline_id").isNotNull()))
         .groupBy(
             "marketing_airline_id",
             "operating_airline_id",
@@ -354,16 +366,17 @@ def run_operations_analytics(spark, cfg):
             F.count("*").alias("total_flights"),
             F.sum("is_completed").alias("completed_flights"),
             F.sum("is_cancelled").alias("cancelled_flights"),
-            F.sum("is_delayed").alias("delayed_flights"),
-            F.round(F.avg(F.when(F.col("is_completed") == 1, F.col("departure_delay_min"))), 2).alias("avg_departure_delay_min"),
-            F.round(F.avg(F.when(F.col("is_completed") == 1, F.col("arrival_delay_min"))), 2).alias("avg_arrival_delay_min"),
+            F.sum(F.when((F.col("is_delayed") == 1) & (F.col("is_completed") == 1), 1)).alias("delayed_departure_flights"),
+            F.sum(F.when((F.col("arrival_delay_min").isNotNull()) & (F.col("arrival_delay_min") > 0) & (F.col("is_completed") == 1), 1)).alias("delayed_arrival_flights"),
+            F.sum(F.when((F.col("is_delayed") == 1) & (F.col("is_completed") == 1), F.col("departure_delay_min"))).alias("total_departure_delay_minutes"),
+            F.sum(F.when((F.col("arrival_delay_min").isNotNull()) & (F.col("arrival_delay_min") > 0) & (F.col("is_completed") == 1), F.col("arrival_delay_min"))).alias("total_arrival_delay_minutes"),
             F.round(F.avg(F.when(F.col("is_completed") == 1, F.col("flight_duration_min"))), 2).alias("avg_flight_duration_min"),
         )
         .withColumn(
             "on_time_rate_pct",
             F.when(
                 F.col("completed_flights") > 0,
-                F.round((F.col("completed_flights") - F.col("delayed_flights")) * 100.0 / F.col("completed_flights"), 2)
+                F.round((F.col("completed_flights") - F.col("delayed_departure_flights")) * 100.0 / F.col("completed_flights"), 2)
             )
         )
         .withColumn(
@@ -373,7 +386,21 @@ def run_operations_analytics(spark, cfg):
                 F.round(F.col("cancelled_flights") * 100.0 / F.col("total_flights"), 2)
             )
         )
-    )
+        .withColumn(
+            "avg_departure_delay_min",
+            F.when(
+                F.col("delayed_departure_flights") > 0,
+                F.round(F.col("total_departure_delay_minutes") / F.col("delayed_departure_flights"), 2)
+            )
+        )
+        .withColumn(
+            "avg_arrival_delay_min",
+            F.when(
+                F.col("delayed_arrival_flights") > 0,
+                F.round(F.col("total_arrival_delay_minutes") / F.col("delayed_arrival_flights"), 2)
+            )
+        )
+        .drop("total_departure_delay_minutes", "total_arrival_delay_minutes")
 
     airline_perf_df.write.mode("overwrite").option("mergeSchema", "true").saveAsTable(gold_airline_performance)
     logger.info(f"Saved airline performance table: {gold_airline_performance}")

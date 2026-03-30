@@ -1,11 +1,11 @@
 resources:
   jobs:
     sep_temp_gold:
-      name: "sep oper_gold"
+      name: "sep oper_old_gold"
       tasks:
         - task_key: operations_gold_task
           spark_python_task:
-            python_file: ${workspace.file_path}/src/3_gold/operations/operations_gold_job.py
+            python_file: ${workspace.file_path}/src/3_gold/operations_gold_job.py
             parameters:
               - --root_path
               - "${workspace.file_path}"

@@ -5,6 +5,7 @@ from copy import deepcopy
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 _CONFIG = None
+DEFAULT_PROFILE = "dev"
 
 class ConfigProperties:
     def __init__(self, data: dict):
@@ -48,5 +49,7 @@ def init_ConfigProperties(profile):
     _CONFIG = load_ConfigProperties(profile)
 
 def get_ConfigProperties():
-    # TODO: Error if config is not initialized
+    global _CONFIG
+    if _CONFIG is None:
+        init_ConfigProperties(DEFAULT_PROFILE)
     return _CONFIG

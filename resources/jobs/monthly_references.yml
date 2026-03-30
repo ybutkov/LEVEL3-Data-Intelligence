@@ -1,8 +1,15 @@
 resources:
   jobs:
     monthly_references_ingestion:
-      name: "sep monthly_ref_ingestion"
+      name: "Monthly Reference Ingestion"
+
+      schedule:
+        quartz_cron_expression: "0 5 11 * * ?"
+        timezone_id: Europe/Berlin
+        pause_status: UNPAUSED
+
       tasks:
+        # 1. FETCH OPERATIONS (API → landing_area)
         - task_key: reference_monthly_task
           spark_python_task:
             python_file: ${workspace.file_path}/src/1_bronze/monthly_references_ingeston.py
@@ -10,16 +17,27 @@ resources:
               - --root_path
               - "${workspace.file_path}"
           environment_key: default
+          timeout_seconds: 1800
+          max_retries: 2
+          min_retry_interval_millis: 60000
+
+        # 2. BRONZE - Auto Loader (operations + references from landing_area)
+        - task_key: load_to_bronze
+          depends_on:
+            - task_key: reference_monthly_task
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.ingestion_pipeline_autoload.id}
+          timeout_seconds: 1800
+          max_retries: 2
+          min_retry_interval_millis: 60000
+
       queue:
         enabled: true
+
       environments:
         - environment_key: default
           spec:
             environment_version: "5"
+
       performance_target: PERFORMANCE_OPTIMIZED
       max_concurrent_runs: 1
-      # schedule:
-      #   quartz_cron_expression: 25 14 7 20 * ?
-      #   timezone_id: Europe/Berlin
-      #   pause_status: UNPAUSED
-
