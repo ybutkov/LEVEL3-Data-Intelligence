@@ -252,6 +252,10 @@ def gold_airport_traffic():
                 F.round(F.col("delayed_departures") * 100.0 / F.col("completed_departures"), 2)
             )
         )
+        .withColumn(
+            "total_delayed",
+            F.col("delayed_departures")
+        )
         .drop("total_departure_delay_minutes")
     )
     
@@ -288,6 +292,10 @@ def gold_airport_traffic():
                 F.round(F.col("delayed_arrivals") * 100.0 / F.col("completed_arrivals"), 2)
             )
         )
+        .withColumn(
+            "total_delayed",
+            F.col("delayed_arrivals")
+        )
         .drop("total_arrival_delay_minutes")
     )
     
@@ -298,9 +306,9 @@ def gold_airport_traffic():
         airport_traffic_df
         .groupBy("airport_code", "country_code")
         .agg(
-            F.sum("total_departures").alias("total_movements"),
-            F.sum("completed_departures").alias("total_completed"),
-            F.sum("delayed_departures").alias("total_delayed"),
+            F.sum(F.when(F.col("movement_type") == "DEPARTURE", F.col("total_departures")).otherwise(F.col("total_arrivals"))).alias("total_movements"),
+            F.sum(F.when(F.col("movement_type") == "DEPARTURE", F.col("completed_departures")).otherwise(F.col("completed_arrivals"))).alias("total_completed"),
+            F.sum("total_delayed").alias("total_delayed"),
         )
     )
     
