@@ -18,8 +18,8 @@ resources:
             environment_version: "5"
       performance_target: PERFORMANCE_OPTIMIZED
       max_concurrent_runs: 1
-      schedule:
-        quartz_cron_expression: 25 14 7 20 * ?
-        timezone_id: Europe/Berlin
-        pause_status: UNPAUSED
+      # schedule:
+      #   quartz_cron_expression: 25 14 7 20 * ?
+      #   timezone_id: Europe/Berlin
+      #   pause_status: UNPAUSED
 
