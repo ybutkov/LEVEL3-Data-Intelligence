@@ -2,30 +2,10 @@ from pyspark.sql import SparkSession
 spark = SparkSession.getActiveSession()
 
 from pyspark import pipelines as dp
-from pyspark.sql.functions import col, explode, from_json, upper, trim, lower, expr, udf
-from pyspark.sql.types import StringType
+from pyspark.sql.functions import col, explode, from_json, upper, trim, lower, expr
 import src.services.parsing_schemas as schemas
 from src.services.scd.utils.rules import COUNTRY_RULES
-import json
-
-
-# UDF to normalize JSON: wrap single Name objects in array
-@udf(returnType=StringType())
-def normalize_country_json(raw_json_str):
-    try:
-        data = json.loads(raw_json_str)
-        countries = data.get('CountryResource', {}).get('Countries', {}).get('Country', [])
-        
-        # Normalize each country's Name field to be an array
-        for country in countries:
-            names_obj = country.get('Names', {}).get('Name')
-            # If Name is a dict (single object), wrap it in array
-            if isinstance(names_obj, dict):
-                country['Names']['Name'] = [names_obj]
-        
-        return json.dumps(data)
-    except:
-        return raw_json_str
+from src.services.scd.utils.json_normalization import normalize_names_field
 
 
 COUNTRY_BRONZE_SOURCE = "lufthansa_level.bronze.countries_raw"
@@ -53,7 +33,7 @@ def country_invalid_json():
 def exploded_country_entity():
     return (
         dp.read_stream(COUNTRY_BRONZE_SOURCE)
-        .withColumn("raw_json_normalized", normalize_country_json(col("raw_json")))
+        .withColumn("raw_json_normalized", normalize_names_field(col("raw_json")))
         .select(
             *[col(f) for f in COUNTRY_META_FIELDS],
             from_json(col("raw_json_normalized"), schemas.country_resource_schema).alias("data_json")
