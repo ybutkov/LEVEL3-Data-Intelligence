@@ -21,12 +21,15 @@ logger.info("LOADING REFERENCE DIMENSIONS")
 
 time_data = [
     ("ON", "On Time"),
+    ("OT", "On Time"),
     ("DL", "Delayed"),
     ("AR", "Arrived"),
     ("BD", "Boarding"),
     ("CK", "Check-In"),
     ("DP", "Departed"),
     ("GD", "Gate Delay"),
+    ("FE", "Forward Estimeted"),
+    ("NO", "No info"),
 ]
 
 time_schema = StructType([
@@ -51,13 +54,17 @@ flight_data = [
     ("DP", "Departed"),
     ("DV", "Diverted"),
     ("LND", "Landed"),
+    ("LD", "Landed"),
     ("NO", "No Operation"),
     ("OK", "On Time"),
     ("RA", "Rerouted"),
     ("RP", "Rerouted and Delayed"),
     ("CA", "Cancelled"),
+    ("CD", "Cancelled"),
     ("BD", "Boarding"),
     ("CK", "Check-In"),
+    ("NA", "No Arrival?"),
+    ("RT", "Returned"),
 ]
 
 flight_schema = StructType([
