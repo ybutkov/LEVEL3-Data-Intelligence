@@ -9,24 +9,29 @@ if root_path and root_path not in sys.path:
 
 from src.config.config_properties import get_ConfigProperties
 from src.util.tables_utils import build_table_name
+from src.util.tables_utils import build_full_table_name
 
+
+CATALOG = spark.conf.get("catalog")
+SILVER_SCHEMA = spark.conf.get("silver_schema")
+GOLD_SCHEMA = spark.conf.get("gold_schema")
 # Constants
 MIN_DELAY_MINUTES = 15  # ignore delays less than 15 minutes
 
 
 @dp.materialized_view(
-    name="gold_flight_metrics",
+    name=build_full_table_name(CATALOG, GOLD_SCHEMA, "gold_flight_metrics"),
     comment="Flight metrics with delay thresholds and completion flags"
 )
 def gold_flight_metrics():
-    cfg = get_ConfigProperties()
+    # cfg = get_ConfigProperties()
     
-    silver_schema = cfg.storage.silver_schema
-    fact_flight_identity = build_table_name(cfg, silver_schema, "fact_flight_identity")
-    fact_flight_status = build_table_name(cfg, silver_schema, "fact_flight_status")
-    ref_dim_airport = build_table_name(cfg, silver_schema, "ref_dim_airport")
-    dim_flight_status = build_table_name(cfg, silver_schema, "dim_flight_status")
-    dim_time_status = build_table_name(cfg, silver_schema, "dim_time_status")
+    # silver_schema = cfg.storage.silver_schema
+    fact_flight_identity = build_full_table_name(CATALOG, SILVER_SCHEMA, "fact_flight_identity")
+    fact_flight_status = build_full_table_name(CATALOG, SILVER_SCHEMA, "fact_flight_status")
+    ref_dim_airport = build_full_table_name(CATALOG, SILVER_SCHEMA, "ref_dim_airport")
+    dim_flight_status = build_full_table_name(CATALOG, SILVER_SCHEMA, "dim_flight_status")
+    dim_time_status = build_full_table_name(CATALOG, SILVER_SCHEMA, "dim_time_status")
     
     flight_identity_df = spark.table(fact_flight_identity)
     flight_status_df = spark.table(fact_flight_status)
@@ -162,11 +167,11 @@ def gold_flight_metrics():
 
 
 @dp.materialized_view(
-    name="gold_airport_traffic",
+    name=build_full_table_name(CATALOG, GOLD_SCHEMA, "gold_airport_traffic"),
     comment="Airport traffic with movement-type detail and aggregate totals"
 )
 def gold_airport_traffic():
-    flight_metrics = spark.table("gold_flight_metrics")
+    flight_metrics = spark.table(build_full_table_name(CATALOG, GOLD_SCHEMA, "gold_flight_metrics"))
     
     dept_traffic_df = (
         flight_metrics

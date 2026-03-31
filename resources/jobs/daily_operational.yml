@@ -1,18 +1,18 @@
 resources:
   jobs:
-    monthly_references_ingestion:
-      name: "Lufthansa monthly reference Job"
+    lufthansa_daily_workflow:
+      name: "Lufthansa daily operational Job"
 
       schedule:
-        quartz_cron_expression: "0 5 11 * * ?"
+        quartz_cron_expression: "0 30 10 * * ?"
         timezone_id: Europe/Berlin
         pause_status: UNPAUSED
 
       tasks:
-        # 1. FETCH References (API → landing_area)
-        - task_key: fetch_references_data
+        # 1. FETCH OPERATIONS (API → landing_area)
+        - task_key: fetch_operational_data
           spark_python_task:
-            python_file: ${workspace.file_path}/src/1_bronze/monthly_references_ingeston.py
+            python_file: ${workspace.file_path}/src/1_bronze/daily_ingestion_job.py
             parameters:
               - --root_path
               - "${workspace.file_path}"
@@ -21,14 +21,14 @@ resources:
           max_retries: 2
           min_retry_interval_millis: 60000
 
-        # 2. Autoloader -> Bronze -> Silver
-        - task_key: build_silver_references
+        # 2. Autoloader -> Bronze -> Silver -> Gold (Analytics)
+        - task_key: build_gold_operational
           depends_on:
-            - task_key: fetch_references_data
+            - task_key: fetch_operational_data
           pipeline_task:
-            pipeline_id: ${resources.pipelines.references_pipeline.id}
+            pipeline_id: ${resources.pipelines.operations_pipeline.id}
           timeout_seconds: 1800
-          max_retries: 2
+          max_retries: 1 # 2
           min_retry_interval_millis: 60000
 
       queue:
@@ -38,6 +38,7 @@ resources:
         - environment_key: default
           spec:
             environment_version: "5"
+
 
       performance_target: PERFORMANCE_OPTIMIZED
       max_concurrent_runs: 1

@@ -1,0 +1,25 @@
+resources:
+  pipelines:
+    operations_pipeline:
+      name: "Lufthansa operations pipeline"
+      catalog: ${var.catalog}
+      schema: ${var.gold_schema}
+      # target: demo_lufthansa
+      serverless: true
+      continuous: false
+      libraries:
+        - file:
+            path: ${workspace.file_path}/src/1_bronze/operations_autoloader.py
+        - file:
+            path: ${workspace.file_path}/src/services/scd/operations/flight_status_scd.py
+        - file:
+            path: ${workspace.file_path}/src/3_gold/operations_analytics_job_dlt.py
+      configuration:
+        root_path: ${workspace.file_path}
+        catalog: ${var.catalog}
+        bronze_schema: ${var.bronze_schema}
+        silver_schema: ${var.silver_schema}
+        silver_audit_schema: ${var.silver_audit_schema}
+        gold_schema: ${var.gold_schema}
+        landing_area: ${var.landing_area}
+        meta_volume: ${var.meta_volume}

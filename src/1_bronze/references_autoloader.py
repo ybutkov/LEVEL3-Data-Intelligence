@@ -9,6 +9,7 @@ from src.config.endpoints import get_endpoint_config
 from src.config.endpoints import EndpointConfig
 from src.config.config_properties import ConfigProperties
 from src.config.config_properties import get_ConfigProperties
+from src.util.tables_utils import build_full_table_name
 
 from pyspark import pipelines as dp
 from pyspark.sql import functions as F
@@ -16,7 +17,7 @@ from pyspark.sql import functions as F
 import uuid
 
 CATALOG = spark.conf.get("catalog")
-SCHEMA = spark.conf.get("schema")
+SCHEMA = spark.conf.get("bronze_schema")
 LANDING_VOLUME = spark.conf.get("landing_area")
 META_VOLUME = spark.conf.get("meta_volume")
 
@@ -27,11 +28,6 @@ ENDPOINTKEYS_PIPELINE_LIST = [
     EndpointKeys.COUNTRIES,
     EndpointKeys.AIRLINES,
     EndpointKeys.AIRCRAFT,
-    EndpointKeys.FLIGHTSTATUS_BY_ROUTE,
-    EndpointKeys.FLIGHT_SCHEDULES,
-    EndpointKeys.FLIGHTSCHEDULES_BY_ROUTE,
-    EndpointKeys.FLIGHTSTATUS_BY_DEPARTURE,
-    EndpointKeys.FLIGHTSTATUS_BY_ARRIVAL,
 ]
 
 INGEST_RUN_ID = str(uuid.uuid4())
@@ -100,7 +96,8 @@ def build_stream(endpoint_config: EndpointConfig, config_properties: ConfigPrope
 
 
 def register_raw_table(endpoint_config: EndpointConfig, config_properties: ConfigProperties):
-    @dp.table(name=endpoint_config.bronze_table)
+    # @dp.table(name=endpoint_config.bronze_table)
+    @dp.table(name=build_full_table_name(CATALOG, SCHEMA, endpoint_config.bronze_table))
     def _table():
         return build_stream(endpoint_config, config_properties)
 
