@@ -33,8 +33,8 @@ SOURCES = {
 META_FIELDS = ["source_file", "bronze_ingested_at", "ingest_run_id"]
 entity_alias = "flight"
 
-LOCAL_TS_FORMAT = "yyyy-MM-dd'T'HH:mm"
-UTC_TS_FORMAT = "yyyy-MM-dd'T'HH:mmX"
+LOCAL_TS_FORMAT = "yyyy-MM-dd'T'HH:mm:ss"
+UTC_TS_FORMAT = "yyyy-MM-dd'T'HH:mm:ssX"
 
 
 def generate_flight_key(col_ref):

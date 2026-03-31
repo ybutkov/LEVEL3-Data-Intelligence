@@ -125,9 +125,9 @@ def gold_flight_metrics():
                 F.col("actual_departure_utc").isNotNull() & F.col("scheduled_departure_utc").isNotNull(),
                 F.greatest(
                     F.lit(0),
-                    (F.unix_timestamp("actual_departure_utc") - F.unix_timestamp("scheduled_departure_utc")) / 60.0
+                    (F.unix_timestamp(F.col("actual_departure_utc")) - F.unix_timestamp(F.col("scheduled_departure_utc"))) / 60.0
                 )
-            )
+            ).otherwise(F.lit(None))
         )
         .withColumn(
             "arrival_delay_min",
@@ -135,16 +135,16 @@ def gold_flight_metrics():
                 F.col("actual_arrival_utc").isNotNull() & F.col("scheduled_arrival_utc").isNotNull(),
                 F.greatest(
                     F.lit(0),
-                    (F.unix_timestamp("actual_arrival_utc") - F.unix_timestamp("scheduled_arrival_utc")) / 60.0
+                    (F.unix_timestamp(F.col("actual_arrival_utc")) - F.unix_timestamp(F.col("scheduled_arrival_utc"))) / 60.0
                 )
-            )
+            ).otherwise(F.lit(None))
         )
         .withColumn(
             "flight_duration_min",
             F.when(
                 F.col("actual_departure_utc").isNotNull() & F.col("actual_arrival_utc").isNotNull(),
-                (F.unix_timestamp("actual_arrival_utc") - F.unix_timestamp("actual_departure_utc")) / 60.0
-            )
+                (F.unix_timestamp(F.col("actual_arrival_utc")) - F.unix_timestamp(F.col("actual_departure_utc"))) / 60.0
+            ).otherwise(F.lit(None))
         )
         .withColumn(
             "is_completed",
@@ -198,7 +198,7 @@ def gold_airport_traffic():
             F.when(
                 F.col("total_delayed") > 0,
                 F.round(F.col("total_delay_minutes") / F.col("total_delayed"), 2)
-            )
+            ).otherwise(0)
         )
         .withColumn(
             "delay_rate_pct",
@@ -235,7 +235,7 @@ def gold_airport_traffic():
             F.when(
                 F.col("total_delayed") > 0,
                 F.round(F.col("total_delay_minutes") / F.col("total_delayed"), 2)
-            )
+            ).otherwise(0)
         )
         .withColumn(
             "delay_rate_pct",
