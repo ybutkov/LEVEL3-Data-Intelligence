@@ -14,13 +14,21 @@ from pyspark import pipelines as dp
 from pyspark.sql.functions import col, explode, from_json, upper, trim, lower, expr, concat_ws, coalesce, lit, try_to_timestamp, substring, replace, when
 import src.services.parsing_schemas as schemas
 from src.services.scd.utils.rules import OPERATIONAL_RULES
+from src.util.tables_utils import build_full_table_name
 
 # Configuration
+CATALOG = spark.conf.get("catalog")
+BRONZE_SCHEMA = spark.conf.get("bronze_schema")
+SILVER_SCHEMA = spark.conf.get("silver_schema")
+SILVER_AUDIT_SCHEMA = spark.conf.get("silver_audit_schema")
+
 SOURCES = {
-    "by_route": "lufthansa_level.bronze.flightstatus_by_route_raw",
-    "by_departure": "lufthansa_level.bronze.flightstatus_by_departure_raw",
-    "by_arrival": "lufthansa_level.bronze.flightstatus_by_arrival_raw"
+    "by_route": build_full_table_name(CATALOG, BRONZE_SCHEMA, "flightstatus_by_route_raw"),
+    "by_departure": build_full_table_name(CATALOG, BRONZE_SCHEMA, "flightstatus_by_departure_raw"),
+    "by_arrival": build_full_table_name(CATALOG, BRONZE_SCHEMA, "flightstatus_by_arrival_raw")
 }
+
+
 
 META_FIELDS = ["source_file", "bronze_ingested_at", "ingest_run_id"]
 entity_alias = "flight"
@@ -42,6 +50,7 @@ def generate_flight_key(col_ref):
 
 def build_flight_flow(source_key, source_table):
     
+    # @dp.view(name=f"exploded_{source_key}")
     @dp.view(name=f"exploded_{source_key}")
     def exploded_view():
         return (
@@ -101,7 +110,7 @@ def build_flight_flow(source_key, source_table):
     
     # @dp.table(name=f"silver_audit.err_flight_status_{source_key}_quarantine")
     @dp.append_flow(
-        target = "silver_audit.err_flight_status_quarantine",
+        target = build_full_table_name(CATALOG, SILVER_AUDIT_SCHEMA, "err_flight_status_quarantine"),
         name = f"flow_quarantine_{source_key}"
     )
     def quarantine_table():
@@ -123,7 +132,7 @@ def build_flight_flow(source_key, source_table):
     
     # @dp.table(name=f"silver_audit.err_flight_status_invalid_json_{source_key}")
     @dp.append_flow(
-        target = "silver_audit.err_flight_status_invalid_json",
+        target = build_full_table_name(CATALOG, SILVER_AUDIT_SCHEMA, "err_flight_status_invalid_json"),
         name = f"flow_invalid_json_{source_key}"
     )
     def invalid_json_table():
@@ -198,10 +207,10 @@ def build_flight_flow(source_key, source_table):
         )
 
 
-dp.create_streaming_table("silver_audit.err_flight_status_invalid_json")
-dp.create_streaming_table("silver_audit.err_flight_status_quarantine")
-dp.create_streaming_table("silver.fact_flight_status")
-dp.create_streaming_table("silver.fact_flight_identity")
+dp.create_streaming_table(build_full_table_name(CATALOG, SILVER_AUDIT_SCHEMA, "err_flight_status_invalid_json"))
+dp.create_streaming_table(build_full_table_name(CATALOG, SILVER_AUDIT_SCHEMA, "err_flight_status_quarantine"))
+dp.create_streaming_table(build_full_table_name(CATALOG, SILVER_SCHEMA, "fact_flight_status"))
+dp.create_streaming_table(build_full_table_name(CATALOG, SILVER_SCHEMA, "fact_flight_identity"))
 
 for source_key, source_table in SOURCES.items():
 
@@ -209,7 +218,7 @@ for source_key, source_table in SOURCES.items():
 
     dp.create_auto_cdc_flow(
         name=f"cdc_flight_identity_{source_key}",
-        target="silver.fact_flight_identity",
+        target=build_full_table_name(CATALOG, SILVER_SCHEMA, "fact_flight_identity"),
         source=f"clean_flight_identity_{source_key}",
         keys=["flight_key"],
         sequence_by=col("bronze_ingested_at"),
@@ -219,7 +228,7 @@ for source_key, source_table in SOURCES.items():
 
     dp.create_auto_cdc_flow(
         name=f"cdc_flight_status_{source_key}",
-        target="silver.fact_flight_status",
+        target=build_full_table_name(CATALOG, SILVER_SCHEMA, "fact_flight_status"),
         source=f"clean_flight_status_{source_key}",
         keys=["flight_key"],
         sequence_by=col("bronze_ingested_at"),

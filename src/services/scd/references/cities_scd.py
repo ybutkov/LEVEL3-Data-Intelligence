@@ -5,6 +5,7 @@ from pyspark import pipelines as dp
 from pyspark.sql.functions import col, explode, from_json, upper, trim, lower, expr
 import src.services.parsing_schemas as schemas
 from src.services.scd.utils.rules import CITY_RULES
+from src.services.scd.utils.json_normalization import normalize_names_field
 
 
 CITY_BRONZE_SOURCE = "lufthansa_level.bronze.cities_raw"
@@ -32,9 +33,10 @@ def city_invalid_json():
 def exploded_city_entity():
     return (
         dp.read_stream(CITY_BRONZE_SOURCE)
+        .withColumn("raw_json_normalized", normalize_names_field(col("raw_json")))
         .select(
             *[col(f) for f in CITY_META_FIELDS],
-            from_json(col("raw_json"), schemas.city_resource_schema).alias("data_json")
+            from_json(col("raw_json_normalized"), schemas.city_resource_schema).alias("data_json")
         )
         .filter(col("data_json").isNotNull())
         .select(

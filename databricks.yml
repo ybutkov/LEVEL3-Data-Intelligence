@@ -1,5 +1,8 @@
+# Lufthansa data platform — Databricks Asset Bundle. only serlverless (free edition)
+# docs: https://docs.databricks.com/en/dev-tools/bundles/index.html
+
 bundle:
-  name: lufthansa_bundle
+  name: lufthansa_data_bundle
 
 include:
   - resources/*.yml
@@ -10,17 +13,50 @@ variables:
   catalog:
     description: "Catalog for data assets"
     default: lufthansa_level
-  schema:
-    description: "Schema for data assets"
-    default: default
+  bronze_schema:
+    description: Schema for raw_data volume and bronze Delta tables 
+    default: bronze
+  silver_schema:
+    description: Schema for silver Delta tables
+    default: silver
+  silver_audit_schema:
+    description: Schema for silver audit Delta tables
+    default: silver_audit
+  gold_schema:
+    description: Schema for gold Delta tables
+    default: gold
+  landing_area:
+    description: Landing area for raw data
+    default: landing_area
+  meta_volume: 
+    default:  autoloader_metadata
+
 
 targets:
   dev:
-    mode: development
     default: true
+    mode: development
     workspace:
       host: https://dbc-5ac54e60-f19e.cloud.databricks.com
       root_path: ~/.bundle/${bundle.name}/${bundle.target}
     variables:
       catalog: lufthansa_level
-      schema: bronze
+      bronze_schema: bronze
+      silver_schema: silver
+      silver_audit_schema: silver_audit
+      gold_schema: gold
+      landing_area: landing_area
+      meta_volume: autoloader_metadata
+  # prod:
+  #   mode: production
+  #   workspace:
+  #     host: https://dbc-5ac54e60-f19e.cloud.databricks.com
+  #     root_path: ~/.bundle/${bundle.name}/${bundle.target}
+  #     catalog: lufthansa_level
+  #     bronze_schema: bronze
+  #     silver_schema: silver
+  #     gold_schema: gold
+  #   permissions:
+  #     - user_name: herr.butkov@gmail.com
+  #       level: CAN_MANAGE
+

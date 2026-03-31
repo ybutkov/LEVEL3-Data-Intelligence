@@ -1,0 +1,23 @@
+resources:
+  pipelines:
+    references_pipeline:
+      name: "Lufthansa references pipeline"
+      catalog: ${var.catalog}
+      schema: ${var.bronze_schema}
+      serverless: true
+      continuous: false
+      libraries:
+        - file:
+            path: ${workspace.file_path}/src/1_bronze/references_autoloader.py
+        - file:
+            path: ${workspace.file_path}/src/2_silver/references_cdc_job.py
+            
+      configuration:
+        root_path: ${workspace.file_path}
+        catalog: ${var.catalog}
+        bronze_schema: ${var.bronze_schema}
+        silver_schema: ${var.silver_schema}
+        silver_audit_schema: ${var.silver_audit_schema}
+        gold_schema: ${var.gold_schema}
+        landing_area: ${var.landing_area}
+        meta_volume: ${var.meta_volume}

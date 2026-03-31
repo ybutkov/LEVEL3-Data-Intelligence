@@ -5,6 +5,7 @@ from pyspark import pipelines as dp
 from pyspark.sql.functions import col, explode, from_json, upper, trim, expr
 import src.services.parsing_schemas as schemas
 from src.services.scd.utils.rules import AIRPORT_RULES
+from src.services.scd.utils.json_normalization import normalize_names_field
 
 AIRPORT_BRONZE_SOURCE = "lufthansa_level.bronze.airports_raw"
 AIRPORT_META_FIELDS = ["source_file", "bronze_ingested_at", "ingest_run_id"]
@@ -31,9 +32,10 @@ def airport_invalid_json():
 def exploded_airport_entity():
     return (
         dp.read_stream(AIRPORT_BRONZE_SOURCE)
+        .withColumn("raw_json_normalized", normalize_names_field(col("raw_json")))
         .select(
             *[col(f) for f in AIRPORT_META_FIELDS],
-            from_json(col("raw_json"), schemas.airport_resource_schema).alias("data_json")
+            from_json(col("raw_json_normalized"), schemas.airport_resource_schema).alias("data_json")
         )
         .filter(col("data_json").isNotNull())
         .select(

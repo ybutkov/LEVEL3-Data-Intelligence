@@ -5,6 +5,7 @@ from pyspark import pipelines as dp
 from pyspark.sql.functions import col, explode, from_json, upper, trim, lower, expr
 import src.services.parsing_schemas as schemas
 from src.services.scd.utils.rules import COUNTRY_RULES
+from src.services.scd.utils.json_normalization import normalize_names_field
 
 
 COUNTRY_BRONZE_SOURCE = "lufthansa_level.bronze.countries_raw"
@@ -32,9 +33,10 @@ def country_invalid_json():
 def exploded_country_entity():
     return (
         dp.read_stream(COUNTRY_BRONZE_SOURCE)
+        .withColumn("raw_json_normalized", normalize_names_field(col("raw_json")))
         .select(
             *[col(f) for f in COUNTRY_META_FIELDS],
-            from_json(col("raw_json"), schemas.country_resource_schema).alias("data_json")
+            from_json(col("raw_json_normalized"), schemas.country_resource_schema).alias("data_json")
         )
         .filter(col("data_json").isNotNull())
         .select(
@@ -95,7 +97,7 @@ def country_names_flat_checked():
     
     df = df.withColumn(
         "names_array",
-        expr(f"coalesce({entity_alias}.Names.Name, array())")
+        col(f"{entity_alias}.Names.Name")
     ).select(
         *[col(f) for f in COUNTRY_META_FIELDS],
         col(code_alias),
