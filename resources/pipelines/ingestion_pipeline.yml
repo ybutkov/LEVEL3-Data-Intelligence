@@ -8,7 +8,7 @@ resources:
       continuous: false
       libraries:
         - file:
-            path: ${workspace.file_path}/src/1_bronze/references_pipeline.py
+            path: ${workspace.file_path}/src/1_bronze/references_autoloader_ingest.py
             
       configuration:
         root_path: ${workspace.file_path}

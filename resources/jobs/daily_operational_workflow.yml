@@ -10,67 +10,57 @@ resources:
 
       tasks:
         # 1. FETCH OPERATIONS (API → landing_area)
-        # - task_key: fetch_operational_data
-        #   spark_python_task:
-        #     python_file: ${workspace.file_path}/src/1_bronze/daily_ingestion_job.py
-        #     parameters:
-        #       - --root_path
-        #       - "${workspace.file_path}"
-        #   environment_key: default
-        #   timeout_seconds: 1800
-        #   max_retries: 2
-        #   min_retry_interval_millis: 60000
+        - task_key: fetch_operational_data
+          spark_python_task:
+            python_file: ${workspace.file_path}/src/1_bronze/daily_ingestion_job.py
+            parameters:
+              - --root_path
+              - "${workspace.file_path}"
+          environment_key: default
+          timeout_seconds: 1800
+          max_retries: 2
+          min_retry_interval_millis: 60000
 
         # 2. BRONZE - Auto Loader (operations + references from landing_area)
-        # - task_key: load_to_bronze
-          # depends_on:
-          #   - task_key: fetch_operational_data
-          # pipeline_task:
-          #   pipeline_id: ${resources.pipelines.ingestion_pipeline_autoload.id}
-          # timeout_seconds: 1800
-          # max_retries: 2
-          # min_retry_interval_millis: 60000
+        - task_key: load_to_bronze
+          depends_on:
+            - task_key: fetch_operational_data
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.ingestion_pipeline_autoload.id}
+          timeout_seconds: 1800
+          max_retries: 2
+          min_retry_interval_millis: 60000
 
         # 3. SILVER - CDC
         - task_key: build_silver_references
-          # depends_on:
-          #   - task_key: load_to_bronze
+          depends_on:
+            - task_key: load_to_bronze
           pipeline_task:
             pipeline_id: ${resources.pipelines.references_cdc_silver.id}
           timeout_seconds: 1800
           max_retries: 1
           min_retry_interval_millis: 60000
 
-        # - task_key: build_silver_operational
-        #   depends_on:
-        #     - task_key: build_silver_references
-        #   pipeline_task:
-        #     pipeline_id: ${resources.pipelines.op_cdc_silver.id}
-        #   timeout_seconds: 1800
-        #   max_retries: 2
-        #   min_retry_interval_millis: 60000
+        - task_key: build_silver_operational
+          depends_on:
+            - task_key: build_silver_references
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.op_cdc_silver.id}
+          timeout_seconds: 1800
+          max_retries: 2
+          min_retry_interval_millis: 60000
 
 
         # 4. GOLD - Analytics tables (enriched flights, metrics, utilization, traffic, performance)
-        # - task_key: build_gold_operational
-          # depends_on:
-          #   - task_key: build_silver_operational
-          #   - task_key: build_silver_references
-          # pipeline_task:
-          #   pipeline_id: ${resources.pipelines.operations_gold_pipeline.id}
-          # timeout_seconds: 1800
-          # max_retries: 1 # 2
-          # min_retry_interval_millis: 60000
-
-        # 5. GOLD - Presentation views (airport map points, route map lines)
-        # - task_key: build_gold_presentation
-        #   depends_on:
-        #     - task_key: build_gold_operational
-        #   pipeline_task:
-        #     pipeline_id: ${resources.pipelines.gold_presentation_pipeline.id}
-        #   timeout_seconds: 1800
-        #   max_retries: 1 # 2
-        #   min_retry_interval_millis: 60000
+        - task_key: build_gold_operational
+          depends_on:
+            - task_key: build_silver_operational
+            - task_key: build_silver_references
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.operations_gold_pipeline.id}
+          timeout_seconds: 1800
+          max_retries: 1 # 2
+          min_retry_interval_millis: 60000
 
       queue:
         enabled: true
