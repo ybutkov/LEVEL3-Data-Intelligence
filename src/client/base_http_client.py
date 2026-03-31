@@ -2,7 +2,21 @@ import requests
 
 
 class BaseHttpClient:
+    """
+    Base HTTP client for making REST API requests.
+    
+    Manages HTTP GET and POST requests with configurable headers, timeouts,
+    and automatic error handling via raise_for_status().
+    """
+    
     def __init__(self, base_url, timeout=30):
+        """
+        Initialize the HTTP client with a base URL and timeout.
+        
+        Args:
+            base_url (str): The base URL for all requests
+            timeout (int): Request timeout in seconds (default: 30)
+        """
         self.base_url = base_url
         self.timeout = timeout
         self.headers = {
@@ -13,6 +27,21 @@ class BaseHttpClient:
         self.session = requests.Session()
 
     def get(self, path, params=None, headers=None, timeout=None):
+        """
+        Execute a GET request.
+        
+        Args:
+            path (str): URL path to append to base_url
+            params (dict): Query parameters (default: None)
+            headers (dict): Custom headers (default: None, uses default headers)
+            timeout (int): Request timeout in seconds (default: None, uses self.timeout)
+            
+        Returns:
+            requests.Response: Response object
+            
+        Raises:
+            requests.HTTPError: If response status code indicates error
+        """
         if timeout is None:
             timeout = self.timeout
         if headers is None:
@@ -26,6 +55,22 @@ class BaseHttpClient:
         return response
 
     def post(self, path, params=None, json=None, headers=None, timeout=None):
+        """
+        Execute a POST request.
+        
+        Args:
+            path (str): URL path to append to base_url
+            params (dict): Query parameters (default: None)
+            json (dict): JSON body data (default: None)
+            headers (dict): Custom headers (default: None, uses default headers)
+            timeout (int): Request timeout in seconds (default: None, uses self.timeout)
+            
+        Returns:
+            requests.Response: Response object
+            
+        Raises:
+            requests.HTTPError: If response status code indicates error
+        """
         if timeout is None:
             timeout = self.timeout
         headers = headers or self.headers

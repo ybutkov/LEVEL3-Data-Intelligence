@@ -7,6 +7,17 @@ import src.services.parsing_schemas as schemas
 from src.services.scd.utils.rules import AIRCRAFT_RULES
 
 
+"""
+Aircraft SCD (Slowly Changing Dimension) Pipeline.
+
+Processes aircraft reference data through silver layer:
+1. Loads raw JSON from bronze
+2. Explodes nested aircraft entity arrays
+3. Validates data against aircraft rules
+4. Applies SCD Type 2 logic (maintains history)
+5. Outputs clean aircraft dimension table
+"""
+
 AIRCRAFT_BRONZE_SOURCE = "lufthansa_level.bronze.aircraft_raw"
 AIRCRAFT_META_FIELDS = ["source_file", "bronze_ingested_at", "ingest_run_id"]
 entity_alias = "aircraft"
@@ -17,6 +28,11 @@ name_alias = "aircraft_name"
 
 @dp.table(name="silver_audit.err_aircraft_invalid_json")
 def aircraft_invalid_json():
+    """
+    Capture aircraft records with invalid JSON that failed parsing.
+    
+    Outputs to audit table for error tracking and investigation.
+    """
     return (
         dp.read_stream(AIRCRAFT_BRONZE_SOURCE)
         .withColumn("parsed", from_json(col("raw_json"), schemas.aircraft_resource_schema))
@@ -30,6 +46,11 @@ def aircraft_invalid_json():
 
 @dp.view(name="exploded_aircraft_entity")
 def exploded_aircraft_entity():
+    """
+    Extract and explode aircraft entities from nested JSON structure.
+    
+    Parses raw JSON and flattens aircraft array for downstream processing.
+    """
     return (
         dp.read_stream(AIRCRAFT_BRONZE_SOURCE)
         .select(
