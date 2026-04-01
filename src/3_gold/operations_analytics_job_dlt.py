@@ -16,8 +16,8 @@ SILVER_SCHEMA = spark.conf.get("silver_schema")
 GOLD_SCHEMA = spark.conf.get("gold_schema")
 
 # Constants
-MIN_DELAY_MINUTES = 15 
-MAX_REASONABLE_DELAY = 1440 
+MIN_DELAY_MINUTES = 10 
+MAX_REASONABLE_DELAY = 60*3 
 
 # Manual mapping for airports missing from the silver.ref_dim_airport table
 AIRPORT_FIX = {
