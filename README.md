@@ -38,20 +38,20 @@ This project demonstrates end-to-end data intelligence delivery using the medall
 │  └─ Ingest metadata (timestamps, run IDs)       │
 └────────────────┬────────────────────────────────┘
                  │
-┌─────────────────┴────────────────────────────────┐
-│  SILVER (Clean)                                 │
+┌────────────────┴─────────────────────────────────┐
+│  SILVER (Clean)                                  │
 │  └─ Data validation & quality checks             │
 │  └─ SCD Type 2 for reference dimensions          │
 │  └─ Deduplication & standardization              │
 │  └─ Error quarantine tables                      │
-└────────────────┬────────────────────────────────┘
+└────────────────┬─────────────────────────────────┘
                  │
-┌─────────────────┴────────────────────────────────┐
-│  GOLD (Analytics)                               │
+┌────────────────┴─────────────────────────────────┐
+│  GOLD (Analytics)                                │
 │  └─ Aggregated operational metrics               │
 │  └─ Business logic applied                       │
 │  └─ Optimized for dashboard consumption          │
-└─────────────────────────────────────────────────┘
+└──────────────────────────────────────────────────┘
 ```
 
 ### Data Sources
@@ -141,8 +141,7 @@ This project demonstrates end-to-end data intelligence delivery using the medall
 ### 1. Clone Repository
 
 ```bash
-git clone <repository-url>
-cd level_3103
+git clone https://github.com/ybutkov/LEVEL3-Data-Intelligence.git
 ```
 
 ### 2. Configure Databricks CLI
@@ -169,7 +168,7 @@ databricks secrets put --scope lufthansa --key proxy_password --string-value "YO
 
 ### 4. Update Configuration
 
-Edit `src/config/resources/application-dev.yaml`:
+Edit `src/config/resources/application-<profile>.yaml`:
 
 ```yaml
 api:
@@ -192,7 +191,7 @@ secrets:
 ### 5. Deploy Bundle
 
 ```bash
-databricks bundle deploy --profile dev
+databricks bundle deploy --profile <profile>
 ```
 
 ## First Run Setup
@@ -320,6 +319,36 @@ databricks jobs update --job-id <job-id> --pause-status UNPAUSED
 - [ ] Scheduled jobs enabled
 
 ## Data Pipeline
+
+## Technologies Used
+
+- Databricks Jobs and Databricks Asset Bundles
+  - Jobs orchestrate fetch and pipeline tasks.
+  - Bundle configuration in `databricks.yml` manages environments and deployment.
+
+- Request-based ingestion (API fetch layer)
+  - Python ingestion jobs call Lufthansa endpoints per request and persist raw JSON into Unity Catalog volumes.
+  - Fetching includes retry with backoff for temporary errors, fail-fast for permanent errors, and request/response validation.
+
+- Auto Loader (cloudFiles)
+  - Bronze ingestion uses Structured Streaming with `cloudFiles` and `binaryFile` format.
+  - Schema tracking/checkpoint metadata is stored in the configured metadata volume.
+  - New landed files are incrementally discovered and loaded to bronze tables.
+
+- DLT/SDP (Spark Declarative Pipelines)
+  - Pipelines are defined with `pyspark.pipelines as dp` using declarative constructs such as `@dp.table`, `@dp.view`, `@dp.materialized_view`, and flows.
+  - Operational pipeline processes Bronze -> Silver -> Gold.
+  - Reference pipeline processes Bronze -> Silver dimensions.
+
+- CDC and SCD modeling
+  - `dp.create_auto_cdc_flow(..., stored_as_scd_type=1)` is used for current-state tables (overwrite latest values by key).
+  - `dp.create_auto_cdc_flow(..., stored_as_scd_type=2)` is used for history-preserving reference dimensions.
+  - In this project, operational facts are handled with SCD Type 1, while reference dimensions use SCD Type 1/2 patterns depending on table purpose.
+
+- Data quality and auditability
+  - Validation rules are applied before silver publication.
+  - Invalid records are routed to silver audit/quarantine tables for troubleshooting.
+  - Ingestion metadata columns (source file, ingest timestamp, run id) support traceability.
 
 ### Ingestion Flow (Bronze Layer)
 
@@ -536,6 +565,12 @@ response = fetch_data(
 - Comprehensive logging
 - Connection timeout handling
 
+How it works (high-level):
+- Send API request.
+- If the error is temporary, retry with increasing wait time between attempts.
+- If the error is permanent, fail fast and log the reason.
+- If response is valid, save JSON to storage and continue pipeline processing.
+
 ### Configuration Management
 
 Dynamic configuration loading from YAML with profile-specific overrides:
@@ -560,6 +595,35 @@ logger.error("Failed to parse response", exc_info=True)
 ```
 
 ## Data Models
+
+## Jobs And Pipelines
+
+Main scheduled jobs:
+- `lufthansa_daily_workflow` (daily operational data)
+- `monthly_references_ingestion` (monthly reference data)
+
+General flow for both jobs:
+1. Fetch step (Python job task): call Lufthansa API endpoints and save raw JSON to Unity Catalog volume (`landing_area`).
+2. Pipeline step (DLT pipeline task): process landed files with Auto Loader and transform data through medallion layers.
+
+What each job runs:
+
+1. `lufthansa_daily_workflow`
+   - Fetch task: `src/1_bronze/daily_ingestion_job.py`
+   - Then pipeline: `operations_pipeline`
+   - Pipeline stages:
+     - `src/1_bronze/operations_autoloader.py` (files -> bronze tables)
+     - `src/services/scd/operations/flight_status_scd.py` (bronze -> silver facts + audit)
+     - `src/3_gold/operations_analytics_job_dlt.py` (silver -> gold analytics)
+
+2. `monthly_references_ingestion`
+   - Fetch task: `src/1_bronze/monthly_references_ingeston.py`
+   - Then pipeline: `references_pipeline`
+   - Pipeline stages:
+     - `src/1_bronze/references_autoloader.py` (files -> bronze tables)
+     - `src/2_silver/references_cdc_job.py` (bronze -> silver reference dimensions)
+
+In short: each main job first fetches data, then runs a pipeline to transform it. Daily job ends in Gold metrics; monthly job refreshes Silver reference dimensions.
 
 ### Reference Dimensions (SCD Type 2)
 
