@@ -2,16 +2,45 @@ from pyspark import pipelines as dp
 from pyspark.sql.functions import length, explode, from_json
 
 
-def NOT_NULL(c): return f"{c} IS NOT NULL"
-def NOT_EMPTY(c): return f"length(trim({c})) > 0"
-def LENGTH(c, n): return f"length({c}) = {n}"
-def EQUALS(c, v): return f"({c}) = {v}"
-def IS_UPPER(c): return f"{c} = upper({c})"
-def ONLY_LETTERS(c): return f"{c} REGEXP '^[A-Z]+$'"
-def IS_DOUBLE(c): return f"CAST({c} AS DOUBLE) IS NOT NULL"
-def LAT_RANGE(c): return f"CAST({c} AS DOUBLE) BETWEEN -90 AND 90"
-def LON_RANGE(c): return f"CAST({c} AS DOUBLE) BETWEEN -180 AND 180"
-def AIRLINE_LENGTH(c): return f"length({c}) BETWEEN 2 AND 3"
+def NOT_NULL(c): 
+    """SQL condition: column is not null."""
+    return f"{c} IS NOT NULL"
+
+def NOT_EMPTY(c): 
+    """SQL condition: trimmed column length > 0."""
+    return f"length(trim({c})) > 0"
+
+def LENGTH(c, n): 
+    """SQL condition: column length equals n."""
+    return f"length({c}) = {n}"
+
+def EQUALS(c, v): 
+    """SQL condition: column equals value."""
+    return f"({c}) = {v}"
+
+def IS_UPPER(c): 
+    """SQL condition: column is uppercase."""
+    return f"{c} = upper({c})"
+
+def ONLY_LETTERS(c): 
+    """SQL condition: column contains only uppercase letters."""
+    return f"{c} REGEXP '^[A-Z]+$'"
+
+def IS_DOUBLE(c): 
+    """SQL condition: column can be cast to DOUBLE."""
+    return f"CAST({c} AS DOUBLE) IS NOT NULL"
+
+def LAT_RANGE(c): 
+    """SQL condition: latitude is between -90 and 90."""
+    return f"CAST({c} AS DOUBLE) BETWEEN -90 AND 90"
+
+def LON_RANGE(c): 
+    """SQL condition: longitude is between -180 and 180."""
+    return f"CAST({c} AS DOUBLE) BETWEEN -180 AND 180"
+
+def AIRLINE_LENGTH(c): 
+    """SQL condition: airline code length is 2-3 characters."""
+    return f"length({c}) BETWEEN 2 AND 3"
 
 
 COUNTRY_RULES = {

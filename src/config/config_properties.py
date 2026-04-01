@@ -8,6 +8,12 @@ _CONFIG = None
 DEFAULT_PROFILE = "dev"
 
 class ConfigProperties:
+    """
+    Configuration property container that converts nested dicts to objects.
+    
+    Provides dict-like access (via __getitem__ and get) and attribute access
+    to configuration values. Recursively converts nested dicts to ConfigProperties.
+    """
     def __init__(self, data: dict):
         for key, value in data.items():
             if isinstance(value, dict):
@@ -25,11 +31,25 @@ class ConfigProperties:
         return result
 
 def load_yaml(path: str) -> dict:
+    """Load YAML file from resources directory."""
     file_path = BASE_DIR / path
     with open(file_path, "r", encoding="utf-8") as f:
         return yaml.safe_load(f) or {}
 
 def deep_merge(base: dict, override: dict) -> dict:
+    """
+    Deep merge override dict into base dict.
+    
+    Recursively merges nested dicts, allowing profile-specific configs
+    to override base configuration.
+    
+    Args:
+        base (dict): Base configuration dictionary
+        override (dict): Override configuration dictionary
+        
+    Returns:
+        dict: Merged configuration
+    """
     result = deepcopy(base)
     for key, value in override.items():
         if key in result and isinstance(result[key], dict) and isinstance(value, dict):
@@ -39,12 +59,25 @@ def deep_merge(base: dict, override: dict) -> dict:
     return result
 
 def load_ConfigProperties(profile: str) -> ConfigProperties:
+    """
+    Load and merge configuration from base and profile-specific YAML files.
+    
+    Loads application.yaml and application-{profile}.yaml, merges them,
+    and returns as ConfigProperties object.
+    
+    Args:
+        profile (str): Configuration profile name (e.g., 'dev', 'prod')
+        
+    Returns:
+        ConfigProperties: Merged configuration object
+    """
     base_config = load_yaml("resources/application.yaml")
     profile_config = load_yaml(f"resources/application-{profile}.yaml")
     merged_config = deep_merge(base_config, profile_config)
     return ConfigProperties(merged_config)
 
 def init_ConfigProperties(profile):
+    """Initialize global configuration with specified profile."""
     global _CONFIG
     _CONFIG = load_ConfigProperties(profile)
 

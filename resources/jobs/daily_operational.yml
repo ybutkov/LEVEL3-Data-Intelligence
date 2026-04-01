@@ -4,7 +4,7 @@ resources:
       name: "Lufthansa daily operational Job"
 
       schedule:
-        quartz_cron_expression: "0 30 10 * * ?"
+        quartz_cron_expression: "0 6 * * * ?"
         timezone_id: Europe/Berlin
         pause_status: UNPAUSED
 

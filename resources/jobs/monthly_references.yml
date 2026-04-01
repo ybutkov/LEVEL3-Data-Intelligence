@@ -4,7 +4,7 @@ resources:
       name: "Lufthansa monthly reference Job"
 
       schedule:
-        quartz_cron_expression: "0 5 11 * * ?"
+        quartz_cron_expression: "0 0 1 * * ?"
         timezone_id: Europe/Berlin
         pause_status: UNPAUSED
 

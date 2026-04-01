@@ -8,6 +8,15 @@ from functools import lru_cache
 # TODO: cache ?
 @lru_cache(maxsize=1)
 def get_lufthansa_client():
+    """
+    Get cached Lufthansa OAuth API client instance.
+    
+    Creates a LufthansaOAuthClient using configuration properties and
+    secrets. Result is cached (single instance) for reuse.
+    
+    Returns:
+        LufthansaOAuthClient: Configured OAuth client for API requests
+    """
     configProperties = get_ConfigProperties()
     base_url = f"{configProperties.api.base_url}/{configProperties.api.version}"
     url_oauth_token = configProperties.api.url_oauth_token

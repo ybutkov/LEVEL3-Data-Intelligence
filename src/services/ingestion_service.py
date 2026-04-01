@@ -26,6 +26,21 @@ NON_RETRYABLE_STATUS_CODES = {HTTPStatus.BAD_REQUEST,
 
 
 def _parse_json_response(response):
+    """
+    Parse and validate a JSON response from HTTP request.
+    
+    Attempts to parse response as JSON and validates that the top-level
+    element is a dictionary object.
+    
+    Args:
+        response: HTTP response object with json() method
+        
+    Returns:
+        dict: Parsed JSON payload
+        
+    Raises:
+        ValueError: If response is not valid JSON or not a dict
+    """
     try:
         payload = response.json()
     except json.JSONDecodeError as exc:
@@ -37,6 +52,19 @@ def _parse_json_response(response):
 
 
 def _validate_response_shape(endpoint_config, payload):
+    """
+    Validate response payload structure against endpoint configuration.
+    
+    Checks if a required validation path exists in the parsed JSON response.
+    No-op if endpoint has no validation_path configured.
+    
+    Args:
+        endpoint_config: Endpoint configuration object with optional validation_path
+        payload (dict): Parsed JSON response to validate
+        
+    Raises:
+        ValueError: If validation_path is defined but not found in payload
+    """
     validation_path = getattr(endpoint_config, "validation_path", None)
     if not validation_path:
         return
@@ -49,6 +77,26 @@ def _validate_response_shape(endpoint_config, payload):
 
 
 def fetch_data(url, query_params=None, max_retries=5, timeout=20):
+    """
+    Fetch data from a URL with automatic retry logic and error handling.
+    
+    Implements exponential backoff retry strategy for retryable HTTP errors
+    (5xx, 429) and connection errors. Non-retryable errors (4xx) fail immediately.
+    
+    Args:
+        url (str): Target URL to fetch from
+        query_params (dict): URL query parameters (default: None)
+        max_retries (int): Maximum retry attempts (default: 5)
+        timeout (int): Request timeout in seconds (default: 20)
+        
+    Returns:
+        requests.Response: Response object on success
+        
+    Raises:
+        ValueError: If url is empty or response validation fails
+        RuntimeError: After max retries exceeded for retryable errors
+        requests.HTTPError: For non-retryable HTTP errors
+    """
     if not url:
         logger.error(f"Empty url: {url}")
         raise ValueError(f"Empty url: {url}")

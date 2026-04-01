@@ -9,12 +9,30 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 def project_relative(path):
+    """
+    Convert an absolute file path to a project-relative path.
+    
+    Returns the path relative to PROJECT_ROOT (src directory level).
+    Falls back to original path if conversion fails.
+    
+    Args:
+        path (str): Absolute file path
+        
+    Returns:
+        str: Project-relative path, or original path if conversion fails
+    """
     try:
         return str(Path(path).resolve().relative_to(PROJECT_ROOT))
     except Exception:
         return path
     
 class SpringColorFormatter(logging.Formatter):
+    """
+    Custom log formatter with Spring-like color output.
+    
+    Formats log records with colored level names, shortened file paths,
+    timestamps with milliseconds, and line numbers for terminal display.
+    """
 
     RESET = "\033[0m"
 
@@ -37,6 +55,18 @@ class SpringColorFormatter(logging.Formatter):
     #     return ".".join(p[0] for p in parts[:-1]) + "." + parts[-1]
     
     def shorten_path(self, path: str) -> str:
+        """
+        Shorten file path for compact log display.
+        
+        Abbreviates folder names to first character and keeps full filename.
+        Returns original if already short (<35 chars).
+        
+        Args:
+            path (str): File path to shorten
+            
+        Returns:
+            str: Shortened path or original if already short
+        """
         if len(path) < 35:
             return path
         p = Path(path)
@@ -67,7 +97,8 @@ class SpringColorFormatter(logging.Formatter):
         )
 
 class JSONFormatter(logging.Formatter):
-   def format(self, record: logging.LogRecord) -> str:
+    """JSON log formatter for structured logging."""
+    def format(self, record: logging.LogRecord) -> str:
        log_record = {
            'timestamp': self.formatTime(record, self.datefmt),
            'level': record.levelname,
@@ -78,6 +109,19 @@ class JSONFormatter(logging.Formatter):
        return json.dumps(log_record)
 
 def get_logger(name: str = "lufthansa_ingestion") -> logging.Logger:
+    """
+    Get or create a configured logger instance.
+    
+    Creates a logger with SpringColorFormatter, reads log level from config,
+    and caches handlers to prevent duplicates. Falls back to INFO level if
+    config is unavailable.
+    
+    Args:
+        name (str): Logger name (default: "lufthansa_ingestion")
+        
+    Returns:
+        logging.Logger: Configured logger instance
+    """
     logger = logging.getLogger(name)
     # Ensure configuration is initialized (reads application.yaml + application-<profile>.yaml)
     configProperties = get_ConfigProperties()

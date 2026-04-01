@@ -35,9 +35,23 @@ entity_alias = "flight"
 
 LOCAL_TS_FORMAT = "yyyy-MM-dd'T'HH:mm"
 UTC_TS_FORMAT = "yyyy-MM-dd'T'HH:mmX"
+# LOCAL_TS_FORMAT = "yyyy-MM-dd'T'HH:mm:ss"
+# UTC_TS_FORMAT = "yyyy-MM-dd'T'HH:mm:ssX"
 
 
 def generate_flight_key(col_ref):
+    """
+    Generate unique flight key from marketing carrier, airline, and airport codes.
+    
+    Concatenates airline IDs, flight numbers, and airport codes to create
+    a composite key for identifying unique flights across different views.
+    
+    Args:
+        col_ref: Column reference with nested Flight structure
+        
+    Returns:
+        Column: Concatenated flight key with format "AIRLINE-FLIGHTNUM-AIRLINE-FLIGHTNUM-FROM-TO"
+    """
     return concat_ws("-", 
         upper(trim(col_ref.MarketingCarrier.AirlineID)),
         upper(trim(col_ref.MarketingCarrier.FlightNumber)),
@@ -49,6 +63,16 @@ def generate_flight_key(col_ref):
 
 
 def build_flight_flow(source_key, source_table):
+    """
+    Build streaming flight data pipeline from bronze to silver.
+    
+    Creates exploded and validated views for flight status data, applying
+    operational rules validation and generating flight keys.
+    
+    Args:
+        source_key (str): Identifier for flight status source (by_route, by_departure, etc.)
+        source_table (str): Bronze table path to read streaming data from
+    """
     
     # @dp.view(name=f"exploded_{source_key}")
     @dp.view(name=f"exploded_{source_key}")

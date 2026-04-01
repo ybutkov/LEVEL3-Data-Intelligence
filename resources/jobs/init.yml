@@ -6,7 +6,7 @@ resources:
       tasks:
         - task_key: setup_catalog
           spark_python_task:
-            python_file: ${workspace.file_path}/src/init/setup_catalog.py
+            python_file: ${workspace.file_path}/src/0_init/setup_catalog.py
             parameters:
               - --root_path
               - "${workspace.file_path}"
@@ -16,7 +16,7 @@ resources:
           depends_on:
             - task_key: setup_catalog
           spark_python_task:
-            python_file: ${workspace.file_path}/src/init/load_references.py
+            python_file: ${workspace.file_path}/src/0_init/load_references.py
             parameters:
               - --root_path
               - "${workspace.file_path}"
